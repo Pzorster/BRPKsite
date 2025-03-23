@@ -7,7 +7,11 @@ Needs - in order of priority:
 3.Admin is able to generate payslips and contracts
 4.Looks good while following design constraints of logo
 
-Current confirmed status(8.3.2025):
+Status(8.3.2025):
 - v.1 Db for pt. 1 & 2
 - v.1 viewability admin side
 - v.1 generator of test data in DB
+
+Status(23.03.2025):
+- v.2 generator of test data in DB
+- v.1 Figma layout: https://www.figma.com/design/XxPtnUk5kWPwO8r8BC4VpI/Bergen-Parkour-nettside?t=Ve1MBSIwz2MtU0gd-1
