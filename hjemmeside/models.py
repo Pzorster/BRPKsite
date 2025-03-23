@@ -35,6 +35,7 @@ class StedAktivitet(models.Model):
 class MalgruppeAktivitet(models.Model):
     alder_eller_klasse = models.CharField(max_length=20, verbose_name="Alder/Kl")
     vanskelighetsgrad_eller_formål = models.CharField(max_length=20, verbose_name="Vanskelighetsgrad/Formål")
+    #Change the Å in the variable
 
     def __str__(self):
         return self.alder_eller_klasse + " - " + self.vanskelighetsgrad_eller_formål
@@ -62,7 +63,7 @@ class Personell(models.Model):
     mail = models.EmailField(max_length=100)
     tlf = models.CharField(max_length=8, validators=[kun_tall_validator],)
     # Reconsider how you store personnummer due to security issues
-    person_nummer = models.CharField(max_length=11)
+    person_nummer = models.CharField(max_length=11, blank=True)
     konto_nummer = models.CharField(max_length=20, validators=[kun_tall_validator])
     adresse = models.CharField(max_length=100)
     post_nummer = models.CharField(max_length=4, validators=[kun_tall_validator])
@@ -122,6 +123,8 @@ class Aktivitet(models.Model):
         verbose_name = "Aktivitet"
         verbose_name_plural = "Aktiviteter"
 
+
+# Legg inn drop-in priser for enkelte grupper?
 
 # Del 2: Medlemmer og deltagere - Added mainly through frontend forms
 
