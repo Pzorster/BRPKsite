@@ -1,76 +1,165 @@
 from django.contrib import admin
 from .models import *
 from django.utils.formats import date_format
+from django.utils.html import format_html
+from django.urls import path, reverse
+from django.http import HttpResponseRedirect
 
-# Models registered in a simple way
 
-# Part 1.1
+# Questions: What do you want to see when? What needs to be searchable/filtreable? What shouldnt be cahngable?
+
+
+
+# Part 0 - tabels admins don't need to see usually
+
+
+# Admin site cosmetics
+admin.site.site_header = "Bergen Parkour"
+admin.site.site_title = "Bergen Parkour Portal"
+admin.site.index_title = "Admin Side"
+
+# Part 1 - No extra definition needed
 admin.site.register(TypeAktivitet)
 admin.site.register(StedAktivitet)
 admin.site.register(MalgruppeAktivitet)
 admin.site.register(DatoerSomUtgar)
-
-# Part 1.2
-admin.site.register(Personell)
 admin.site.register(Rolle)
-admin.site.register(AktivitetPersonell)
+admin.site.register(ForesporselKategori)
 
-# Part 2
+# Part 2 - Small aditional functions
+class PersonellAdmin(admin.ModelAdmin):
+    search_fields = ["fornavn", "etternavn"]
+
+admin.site.register(Personell, PersonellAdmin)
+
+
+class PersonellRolleAdmin(admin.ModelAdmin):
+    list_filter = ("rolle", )
+    search_fields = ["personell__fornavn", "personell__etternavn"]
+
+admin.site.register(PersonellRolle, PersonellRolleAdmin)
+
+
+
+# Skal endres
 admin.site.register(Medlem)
-admin.site.register(MeldtInteresse)
-admin.site.register(KontakterForening)
 
-# Part 3
-admin.site.register(Oppmote)
-admin.site.register(KontaktListe)
-admin.site.register(TimeListePersonell)
+admin.site.register(KundeKontakt)
+admin.site.register(MedlemPameldt)
+admin.site.register(BetalingsType)
+admin.site.register(BetalingStatus)
+admin.site.register(AktivitetDatoer)
+admin.site.register(DeltagerOppmote)
+admin.site.register(PersonellOppmote)
+admin.site.register(BetalingStatusDropIn)
 
 
-# More complex representation and processing of models
+# Part 3 - Requires some more functionality
+admin.site.register(Aktivitet)
+# # Should be searchable
+# admin.site.register(Medlem)
 
-# Part 1.3
-# Inline model for AktivitetPersonell
-class AktivitetPersonellInline(admin.TabularInline):
-    model = AktivitetPersonell
-    extra = 1
+# # Part 2
+# admin.site.register(KontakterForening)
 
-class AktivitetAdmin(admin.ModelAdmin):
-    list_display = ['type_aktivitet', 'sted', 'malgruppe', 'oppstart', 'slutt', 'tidsrom', 'antall_ganger', 'pris', 'get_ansvars_personer', 'get_datoer_som_utgar']
-    list_filter = ('oppstart', 'slutt', 'sted__omrade')
-    search_fields = ['sted__omrade', 'malgruppe__alder_eller_klasse']
-    inlines = [AktivitetPersonellInline]
-    filter_horizontal = ['datoer_som_utgar']
+# # Part 3
+# admin.site.register(Oppmote)
+# admin.site.register(KontaktListe)
+# admin.site.register(TimeListePersonell)
 
-    def tidsrom(self, obj):
-        return f"{date_format(obj.kl_start, 'H:i')} - {date_format(obj.kl_slutt, 'H:i')}"
-    tidsrom.short_description = "Tidsrom"
 
-    def get_ansvars_personer(self, obj):
-        # Get all related AktivitetPersonell objects for this Aktivitet
-        personell_relations = obj.aktivitetpersonell_set.select_related('personell').all()
+# # More complex representation and processing of models
+
+# # Part 1.3
+# # Inline model for AktivitetPersonell
+# class AktivitetPersonellInline(admin.TabularInline):
+#     model = AktivitetPersonell
+#     extra = 1
+
+# class AktivitetAdmin(admin.ModelAdmin):
+#     list_display = ['type_aktivitet', 'sted', 'malgruppe', 'oppstart', 'slutt', 'tidsrom', 'antall_ganger', 'pris', 'get_ansvars_personer', 'get_datoer_som_utgar']
+#     list_filter = ('oppstart', 'slutt', 'sted__omrade')
+#     search_fields = ['sted__omrade', 'malgruppe__alder_eller_klasse']
+#     inlines = [AktivitetPersonellInline]
+#     filter_horizontal = ['datoer_som_utgar']
+
+#     def tidsrom(self, obj):
+#         return f"{date_format(obj.kl_start, 'H:i')} - {date_format(obj.kl_slutt, 'H:i')}"
+#     tidsrom.short_description = "Tidsrom"
+
+#     def get_ansvars_personer(self, obj):
+#         # Get all related AktivitetPersonell objects for this Aktivitet
+#         personell_relations = obj.aktivitetpersonell_set.select_related('personell').all()
         
-        # Format each relation to include role if available
-        formatted_relations = []
-        for relation in personell_relations:
-            if relation.rolle:
-                formatted_relations.append(f"{relation.personell} ({relation.rolle})")
-            else:
-                formatted_relations.append(f"{relation.personell}")
+#         # Format each relation to include role if available
+#         formatted_relations = []
+#         for relation in personell_relations:
+#             if relation.rolle:
+#                 formatted_relations.append(f"{relation.personell} ({relation.rolle})")
+#             else:
+#                 formatted_relations.append(f"{relation.personell}")
                 
-        return ", ".join(formatted_relations) if formatted_relations else "-"
-    get_ansvars_personer.short_description = "Ansvars Personer"
+#         return ", ".join(formatted_relations) if formatted_relations else "-"
+#     get_ansvars_personer.short_description = "Ansvars Personer"
 
-    def get_datoer_som_utgar(self, obj):
-        return ", ".join([str(dato) for dato in obj.datoer_som_utgar.all()]) or "-"
-    get_datoer_som_utgar.short_description = "Datoer Som Utgår"
+#     def get_datoer_som_utgar(self, obj):
+#         return ", ".join([str(dato) for dato in obj.datoer_som_utgar.all()]) or "-"
+#     get_datoer_som_utgar.short_description = "Datoer Som Utgår"
 
-    def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related(
-            'datoer_som_utgar', 
-            'aktivitetpersonell_set__personell'
-        )
+#     def get_queryset(self, request):
+#         return super().get_queryset(request).prefetch_related(
+#             'datoer_som_utgar', 
+#             'aktivitetpersonell_set__personell'
+#         )
 
-admin.site.register(Aktivitet, AktivitetAdmin)
+# admin.site.register(Aktivitet, AktivitetAdmin)
+
+# class MeldtInteresseAdmin(admin.ModelAdmin):
+#     list_display = ['oppsummert', 'dato', 'fulgt_opp'] #'send_email_button'
+#     list_filter = ('dato', 'fulgt_opp')
+#     readonly_fields = ('dato', 'oppsummert', 'detaljer')
+
+    # This is code for automatically opening up a mail to send it. This function ill add much later.
+
+    # def send_email_button(self, obj):
+    #     """Custom button to send email response"""
+    #     # Only render button if not already followed up
+    #     if not obj.fulgt_opp:
+    #         return format_html(
+    #             '<a class="button" href="{}">Send Epost</a>',
+    #             reverse('admin:mark_as_followed_up', args=[obj.pk])  # Changed URL name
+    #         )
+    #     return "Epost sendt"
+    # send_email_button.short_description = "Send Epost?"
+    
+    # def get_urls(self):
+    #     """Add custom URL for email sending"""
+    #     urls = super().get_urls()
+    #     custom_urls = [
+    #         path(
+    #             'mark-as-followed/<int:pk>/',  # URL pattern
+    #             self.admin_site.admin_view(self.send_email_view),
+    #             name='mark_as_followed_up',  # URL name used in reverse()
+    #         ),
+    #     ]
+    #     return custom_urls + urls
+    
+    # def send_email_view(self, request, pk):
+    #     obj = self.get_object(request, pk)
+        
+    #     # Instead of sending email, just log it
+    #     print(f"Would send email to {obj.mail} about {obj.oppsummert}")
+        
+    #     # Mark as followed up
+    #     obj.fulgt_opp = True
+    #     obj.save()
+        
+    #     self.message_user(request, f"Marked {obj.oppsummert} as followed up")
+    #     # Change this to your actual app name and model name
+    #     return HttpResponseRedirect(reverse('admin:yourappname_meldtinteresse_changelist'))
+
+
+# admin.site.register(MeldtInteresse, MeldtInteresseAdmin)
 
 # from django.contrib import admin
 # from .models import *

@@ -1,15 +1,29 @@
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 
 kun_tall_validator = RegexValidator(r'^\d+$', 'Kun tillatt med tall. Fjern tomrom.')
 
+# Unsolved collection:
+# 1.General: Reformater etter standarder? En gang og så få AI til å hjelpe meg med å finne convensions feil.
+# 2.General: Hvor trengs det mer valdiering?
+# 3.General: Consider edge cases
+# 4.PersonellRolle: Må generers automatisk for vikarer
+# 5.Betalings klasser: flytte betalingsinfo før aktivitet(one to many)? Sånn at i MedlemPameldt så er betalingsinfo lagret der?
 
-# Del 1: Aktiviteter og personell - Internally added
 
-# Sub 1: Parents - Course details
+# Del 1: Aktiviteter og personell - Legges til internt
 
 class TypeAktivitet(models.Model):
+    
+    """
+    Definerer ulike type aktiviter som vi har.
+    
+    Brukes av:
+    Aktivitet - hvilken aktivtets type det er.
+    """
     type_aktivitet = models.CharField(max_length=40)
 
     def __str__(self):
@@ -17,53 +31,108 @@ class TypeAktivitet(models.Model):
 
     class Meta:
         verbose_name = "Type aktivitet"
-        verbose_name_plural = "Type aktivtet"
+        verbose_name_plural = "Aktivitetsinfo: Type aktivtet"
+
 
 class StedAktivitet(models.Model):
+    """
+    Representerer et sted vi har en aktivitet og har informasjon om vi evt. samrabeider med noen der.
+    
+    Brukes av:
+    Aktivitet - hvilket sted aktiviteten skjer.
+    """
     omrade = models.CharField(max_length=40)
     oppmote_sted = models.TextField()
-    # Test hvordan JSONField funker og så kanskje sett inn en validator her og
-    samarbeids_partnere = models.JSONField(blank=True, default=list)
+    # For øyeblikket løst med help_text. Endres i fremtiden dersom problematisk.
+    samarbeids_partnere = models.JSONField(
+        blank=True,
+        default=list,
+        help_text= """
+        Må formateres som JSON. Anbefalt format [{"Info1": "Noe om de", "Kontaktinfo1": "Person: tlf"} , {"Info2": "Noe", "K2": "P:t"}]
+        """
+    )
 
     def __str__(self):
         return self.omrade
 
     class Meta:
         verbose_name = "Sted for aktivitet"
-        verbose_name_plural = "Sted for aktivitet"
+        verbose_name_plural = "Aktivitetsinfo: Sted for aktivitet"
+
 
 class MalgruppeAktivitet(models.Model):
+    """
+    Kobler en målgrupp vi har sammen med aktivitets nivået vi tilbyr de.
+    
+    Brukes av:
+    Aktivitet - hvem som deltar på aktiviteten.
+
+
+    Med erfaring kan denne formateringen revurderes å brytes opp på en annen måte.
+    """
     alder_eller_klasse = models.CharField(max_length=20, verbose_name="Alder/Kl")
-    vanskelighetsgrad_eller_formål = models.CharField(max_length=20, verbose_name="Vanskelighetsgrad/Formål")
-    #Change the Å in the variable
+    vanskelighetsgrad_eller_formal = models.CharField(max_length=20, verbose_name="Vanskelighetsgrad/Formål")
 
     def __str__(self):
-        return self.alder_eller_klasse + " - " + self.vanskelighetsgrad_eller_formål
+        return f"{self.alder_eller_klasse} - {self.vanskelighetsgrad_eller_formal}"
 
     class Meta:
         verbose_name = "Målgruppe for aktivitet"
-        verbose_name_plural = "Målgruppe for aktivitet"
+        verbose_name_plural = "Aktivitetsinfo: Målgruppe for aktivitet"
+
 
 class DatoerSomUtgar(models.Model):
-    dato = models.DateField()
+    """
+    Viser datoer hvor aktiviteten utgår. Ofte grunnet helligdager.
+    
+    Brukes av:
+    Aktivitet - når aktiviteten ikke skjer.
+    """
+    dato = models.DateField(unique=True)
     begrunnelse = models.CharField(max_length=100)
 
     def __str__(self):
-        return str(self.dato) + " " + self.begrunnelse
+        #Formatterer for å ikke vise årstallet ved visning.
+        formattert_dato = self.dato.strftime('%d %b')
+        return f"{formattert_dato} - {self.begrunnelse}"
 
     class Meta:
+        ordering = ['dato']
         verbose_name = "Datoer som utgår"
-        verbose_name_plural = "Datoer som utgår"
+        verbose_name_plural = "Aktivitetsinfo: Datoer som utgår"
 
-# Sub 2: Parent - Personell details
+class Rolle(models.Model):
+    """
+    Definerer forskjellige roller en person kan ha i foreningen. Både betalte og frivillige.
+    
+    Brukes av:
+    PersonellRolle - I hvilken roller personell opptrer i.
+    """
+    rolle = models.CharField(max_length=20)
+    standard_lonn = models.PositiveIntegerField()
+
+    def __str__(self):
+        return self.rolle
+
+    class Meta:
+        verbose_name = "Rolle"
+        verbose_name_plural = "Personellinfo: Roller"
 
 class Personell(models.Model):
+
+    """
+    Har all informasjon om personer som gjør frivillig eller lønnet arbeid for foreningen.
+    
+    Brukes av:
+    PersonellRolle - hvilken rolelr personen opptrer i.
+
+    Brukes i andre ting i senere faser.
+    """
     fornavn = models.CharField(max_length=100)
     etternavn = models.CharField(max_length=100)
     mail = models.EmailField(max_length=100)
     tlf = models.CharField(max_length=8, validators=[kun_tall_validator],)
-    # Reconsider how you store personnummer due to security issues
-    person_nummer = models.CharField(max_length=11, blank=True)
+    fodsels_dato = models.CharField(max_length=11, blank=True)
     konto_nummer = models.CharField(max_length=20, validators=[kun_tall_validator])
     adresse = models.CharField(max_length=100)
     post_nummer = models.CharField(max_length=4, validators=[kun_tall_validator])
@@ -71,64 +140,167 @@ class Personell(models.Model):
     annen_info = models.TextField(blank=True)
 
     def __str__(self):
-        return self.fornavn + " " + self.etternavn
+        return f"{self.fornavn} {self.etternavn}"
 
     class Meta:
         verbose_name = "Personell"
         verbose_name_plural = "Personell"
 
-class Rolle(models.Model):
-    rolle = models.CharField(max_length=20)
-    lonn = models.PositiveIntegerField()
-
-    def __str__(self):
-        return f"{self.rolle}"
-
-    class Meta:
-        verbose_name = "Rolle"
-        verbose_name_plural = "Roller"
-
-class AktivitetPersonell(models.Model):
-    aktivitet = models.ForeignKey("Aktivitet", on_delete=models.CASCADE)
-    personell = models.ForeignKey(Personell, on_delete=models.CASCADE)
-    rolle = models.ForeignKey(Rolle, on_delete = models.PROTECT)
+class PersonellRolle(models.Model):
+    """
+    Har oversikt over hvilken roller forskjellige personer har.
+    
+    Brukes av:
+    Aktivitet - hvilken person de har i hvilken rolle.
+    """
+    rolle = models.ForeignKey(Rolle, on_delete=models.PROTECT)
+    personell = models.ForeignKey(Personell, on_delete=models.PROTECT)
 
     def __str__(self):
         return f"{self.personell} {self.rolle}"
-
+    
     class Meta:
-        verbose_name = "Hvem/Hvor/Hvilken Rolle"
-        verbose_name_plural = "Hvem/Hvor/Hvilken Rolle"
-
-# Main
+        verbose_name = "Personell i rollen som"
+        verbose_name_plural = "Personellinfo: Personell i rollen som"
 
 class Aktivitet(models.Model):
+
+# Filter/sorter på en del av attr.
+# Ta en endelig vurdering på Choice formateringen du har lyst å kjøre.
+    """
+    All nødvendig informasjon om en spesifikk aktivitet. Diverse ForeignKeys.
+    
+    Brukes av:
+    MedlemPameldt - Oversikt over hvilken medlemmer som går på hvilken aktivitet.
+    AktivitetsDatoer - Oversikt over alle datoene en aktivitet går
+    """
     type_aktivitet = models.ForeignKey(TypeAktivitet, on_delete=models.PROTECT)
     sted = models.ForeignKey(StedAktivitet, on_delete=models.PROTECT)
     malgruppe = models.ForeignKey(MalgruppeAktivitet, on_delete=models.PROTECT)
-    oppstart = models.DateField()
-    slutt = models.DateField()
+    personell_rolle = models.ManyToManyField(PersonellRolle)
+    datoer_som_utgar = models.ManyToManyField(DatoerSomUtgar)
+    start_dato = models.DateField()
+    slutt_dato = models.DateField(editable=False, null=True, blank=True)
     kl_start = models.TimeField()
     kl_slutt = models.TimeField()
     antall_ganger = models.PositiveIntegerField()
-    pris = models.PositiveIntegerField()
-    # ansvars_personer = models.ManyToManyField(Personell)
-    ansvars_personer = models.ManyToManyField(Personell, through='AktivitetPersonell')
-    datoer_som_utgar = models.ManyToManyField(DatoerSomUtgar)
+    antall_plasser = models.PositiveIntegerField()
+    ledige_plasser = models.PositiveIntegerField()
+    pris_vanlig = models.PositiveIntegerField()
+    pris_drop_in = models.PositiveIntegerField()
+    dag_interval = models.PositiveIntegerField()
+    
+    # Tids statusen for aktiviteten
+    STATUS_KOMMENDE = 'Kommende'
+    STATUS_PAGAENDE = 'Pågående'
+    STATUS_AVSLUTTET = 'Avsluttet'
+    
+    status_oppstart = models.CharField(
+        max_length=20,
+        default=STATUS_KOMMENDE,
+        choices=[
+            (STATUS_KOMMENDE, 'Kommende'),
+            (STATUS_PAGAENDE, 'Pågående'),
+            (STATUS_AVSLUTTET, 'Avsluttet'),
+        ]
+    )
+    
+    # Regner ut ledige plasser for aktiviteteten
+    @property
+    def current_ledige_plasser(self):
+        # Real-time calculation when accessed
+        opptatte_plasser = self.pameldte_deltagere.count()
+        return max(0, self.antall_plasser - opptatte_plasser)
+    
+    # Regner ut tids status for aktiviteten
+    @property
+    def current_status(self):
+        today = timezone.now().date()
+        if today < self.start_dato:
+            return self.STATUS_KOMMENDE
+        elif today <= self.slutt_dato:
+            return self.STATUS_PAGAENDE
+        else:
+            return self.STATUS_AVSLUTTET
+    
+    # Husker ikke formålet
+    def update_status(self):
+        """Update the stored status field to current status"""
+        current = self.current_status
+        if self.status_oppstart != current:
+            self.status_oppstart = current
+            self.save(update_fields=['status_oppstart'])
+
+    def save(self, *args, **kwargs):
+        is_new = not self.pk  # Check if this is a new object
+        needs_recalculation = not self.slutt_dato or any(
+            field in kwargs.get('update_fields', []) 
+            for field in ['start_dato', 'dag_interval', 'antall_ganger']
+        )
+        
+        if not self.ledige_plasser:
+            self.ledige_plasser = self.antall_plasser
+
+        # First save for new objects to get a PK
+        if is_new:
+            super().save(*args, **kwargs)
+        
+        if (needs_recalculation or is_new) and self.pk:  # This condition is missing in your code
+        # Calculate end date if needed
+            excluded_dates = list(self.datoer_som_utgar.values_list('dato', flat=True).distinct())
+            
+            # Clear existing dates if we're recalculating
+            if not is_new:
+                self.aktivitet_datoer.all().delete()
+        
+            # Generate course dates
+            course_dates = []
+            current_date = self.start_dato
+            dates_generated = 0
+            
+            while dates_generated < self.antall_ganger:
+                # Skip excluded dates
+                if current_date not in excluded_dates:
+                    course_dates.append(AktivitetDatoer(aktivitet=self, dato=current_date))
+                    dates_generated += 1
+                
+                # Move to next potential date
+                current_date += timedelta(days=self.dag_interval)
+            
+            # Save all dates at once
+            AktivitetDatoer.objects.bulk_create(course_dates)
+            
+            # Set slutt_dato to the last course date
+            last_date = max(cd.dato for cd in course_dates)
+            self.slutt_dato = last_date
+            
+            # Save with just the updated field
+            super().save(update_fields=['slutt_dato'])
+        elif not is_new:
+            super().save(*args, **kwargs)
 
     def __str__(self):
-        return str(self.sted) + " " + str(self.malgruppe)
+        return f"{self.sted} {self.malgruppe}"
 
     class Meta:
         verbose_name = "Aktivitet"
         verbose_name_plural = "Aktiviteter"
 
+# Del 2: Medlemmer, deltagere og kundekontakt - lagt inn gjennom nettsiden
 
-# Legg inn drop-in priser for enkelte grupper?
-
-# Del 2: Medlemmer og deltagere - Added mainly through frontend forms
 
 class Medlem(models.Model):
+
+# Trenger et filter for diverse
+    """
+    Informasjon om personer som melder seg inn i foreningen.
+    
+    Brukes av:
+    MedlemPameldt - Oversikt over hvilken aktiviteter medlemmer er pameldt.
+    Funksjon - Kontaktinfo til personell for aktiviteter
+    """
+
+# Skal formateringen på valgene endres?
     roller = (
         ('Deltager/medlem', 'Deltager/medlem'),
         ('Far', 'Far'),
@@ -139,8 +311,8 @@ class Medlem(models.Model):
 
     fornavn = models.CharField(max_length = 30)
     etternavn = models.CharField(max_length = 30)
-    alder = models.PositiveIntegerField()
-    fodt_ar = models.PositiveIntegerField()
+    fodt_ar = models.DateField()
+    alder = models.PositiveIntegerField(editable=False)
     adresse = models.CharField(max_length = 100)
     post_nummer = models.CharField(max_length=4, validators=[kun_tall_validator])
     foto_tillatelse = models.BooleanField(choices = [(True, "Ja"), (False, "Nei")])
@@ -154,13 +326,17 @@ class Medlem(models.Model):
     kontakt3_mail = models.EmailField(max_length = 100, blank=True)
     kontakt3_rolle = models.CharField(max_length=20, choices=roller, blank=True)
     annet = models.TextField(blank=True)
-    pameldt = models.ManyToManyField(Aktivitet, blank=True)
     # Notater is for internal stuff and should not be shown externally
     notater = models.TextField(blank=True)
+
+    def __str__(self):
+        return self.fornavn + " " + self.etternavn
     
 
     def clean(self):
-        for i in range(2, 4):  # Loop for kontakt2 and kontakt3
+
+        # Validerer når folk fyller inn kontakt2 og kontakt3
+        for i in range(2, 4):
             tlf = getattr(self, f'kontakt{i}_tlf')
             mail = getattr(self, f'kontakt{i}_mail')
             rolle = getattr(self, f'kontakt{i}_rolle')
@@ -172,143 +348,252 @@ class Medlem(models.Model):
             if rolle and (not tlf or not mail):
                 raise ValidationError({f'kontakt{i}_tlf': 'Hvis rolle er valgt, må telefon og e-post også fylles ut.'})
 
-    def save(self, *args, **kwargs):
-        self.clean()  # Ensure clean() runs before saving
-        super().save(*args, **kwargs)
+    # Brukes for å periodisk omregne alder på deltagere
+    @property
+    def current_age(self):
+        today = timezone.now().date()
+        born = self.fodt_ar
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+    
 
+    def save(self, *args, **kwargs):
+
+# Er dette ved registrering eller ved alle endringer?
+        # Regner ut alder på person
+        today = timezone.now().date()
+        born = self.fodt_ar
+        self.alder = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+        # Kjører valdieringen før lagring
+        self.clean()  
+        super().save(*args, **kwargs)
+    
     class Meta:
         verbose_name = "Medlem"
         verbose_name_plural = "Medlemmer"
 
+# Correct class name
 
-class MeldtInteresse(models.Model):
+class ForesporselKategori(models.Model):
+
+# Skal dette endres fra kategori/beskrivelse til kategori/underkategeori eller kategori i seg selv være k/u eller skal __str__sette de sammen?
+    """
+    Kategorier som personer kan velge når de sender inn forespørsler gjennom nettsiden.
+    
+    Brukes av:
+    KundeKontakt - For å kategorisere forespørsler.
+    """
+    kategori = models.CharField(max_length = 30)
+    beskrivelse = models.TextField()
+
+    def __str__(self):
+        return self.kategori
+    
+    class Meta:
+        verbose_name = "Kategori for forespørsler"
+        verbose_name_plural = "Forespørselinfo: Kategorier"
+
+class KundeKontakt(models.Model):
+
+# Trenger filter på kateogri, dato, fulgt_opp
+# Trenger mail knapp som tar med seg info over i en mail
+    """
+    Forskjellige forespørsler(ForesporselKategori) som kommer inn via nettsiden og kontaktinformasjon til de som sender de inn.
+    
+    Planlagt bruk flere steder forbi fase 1.
+    """
     mail = models.EmailField(max_length = 100)
     tlf = models.CharField(max_length = 8,  validators = [kun_tall_validator])
-    oppsummert = models.CharField(max_length = 100)
+    kategori = models.ForeignKey(ForesporselKategori, on_delete = models.PROTECT)
     detaljer = models.TextField()
     dato = models.DateField(auto_now_add = True)
     fulgt_opp = models.BooleanField(default = False)
 
     def __str__(self):
-        return f'{self.oppsumert} - {self.dato}'
+        return f'{self.kategori} - {self.dato}'
 
     class Meta:
-        verbose_name = "Meldt interesse for aktivitet"
-        verbose_name_plural = "Meldt interesse for aktivitet"
-
-class KontakterForening(models.Model):
-    mail = models.EmailField(max_length = 100)
-    tlf = models.CharField(max_length = 8,  validators = [kun_tall_validator])
-    oppsummert = models.CharField(max_length = 100)
-    detaljer = models.TextField()
-    dato = models.DateField(auto_now_add = True)
-    fulgt_opp = models.BooleanField(default = False)
-
-    def __str__(self):
-        return f'{self.oppsumert} - {self.dato}'
-
-    class Meta:
-        verbose_name = "Forespørsler til forenigen"
-        verbose_name_plural = "Forespørsler til forenigen"
+        verbose_name = "Forspørsel"
+        verbose_name_plural = "Forspørsler"
 
 
+# Del 3: Tabeller satt sammen av andre tabeller
 
-# Del 3: Undervisnings tabeller - brukes av instruktører
+class MedlemPameldt(models.Model):
 
-class Oppmote(models.Model):
-    aktivitet = models.ForeignKey(Aktivitet, on_delete = models.PROTECT)
+# Kanskje drop-in skal endres til BetalingsType og sånn blir deltagere fordelt på betalignstabeller?
+# Legge til rabatt attr her.
+    """
+    Oversikt over hvilken medlemmer(Medlem) som er påmeldt hvilken aktiviteter(Aktivitet).
+    
+    Brukes av:
+    Aktiviteter - for å sjekke ledige plasser.
+    DeltagerOppmote - for å sjekke hvilken deltagere det skal sjekkes oppmøte på.
+
+    """
+    aktivitet = models.ForeignKey(Aktivitet, on_delete = models.PROTECT, related_name= "pameldte_deltagere")
     medlem = models.ForeignKey(Medlem, on_delete = models.PROTECT)
-
-    # For øyeblikket er de hardcoded for max 20 ganger, som pleier å være maks på 1 semester
-    tilstede_1 = models.BooleanField(default = False)
-    tilstede2 = models.BooleanField(default = False)
-    tilstede3 = models.BooleanField(default = False)
-    tilstede4 = models.BooleanField(default = False)
-    tilstede5 = models.BooleanField(default = False)
-    tilstede6 = models.BooleanField(default = False)
-    tilstede7 = models.BooleanField(default = False)
-    tilstede8 = models.BooleanField(default = False)
-    tilstede9 = models.BooleanField(default = False)
-    tilstede10 = models.BooleanField(default = False)
-    tilstede11 = models.BooleanField(default = False)
-    tilstede12 = models.BooleanField(default = False)
-    tilstede13 = models.BooleanField(default = False)
-    tilstede14 = models.BooleanField(default = False)
-    tilstede15 = models.BooleanField(default = False)
-    tilstede16 = models.BooleanField(default = False)
-    tilstede17 = models.BooleanField(default = False)
-    tilstede18 = models.BooleanField(default = False)
-    tilstede19 = models.BooleanField(default = False)
-    tilstede20 = models.BooleanField(default = False)
-
-    class Meta:
-        unique_together = ('aktivitet', 'medlem')
-        verbose_name = "Oppmøte lister"
-        verbose_name_plural = "Oppmøte lister"
-
-    def clean(self):
-        max_ganger = self.aktivitet.antall_ganger
-        for i in range (max_ganger + 1, 21):
-            setattr(self, f'tilstede{i}', False)
+    drop_in = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Oppmøte på {self.aktivitet}"
-
-class KontaktListe(models.Model):
-    aktivitet = models.ForeignKey(Aktivitet, on_delete=models.PROTECT)
-    medlem = models.ForeignKey(Medlem, on_delete=models.PROTECT)
-
+        return f"{self.medlem} - {self.aktivitet}"
+    
     class Meta:
-        unique_together = ('aktivitet', 'medlem')  # Prevent duplicates
-        verbose_name = "Kontakt lister"
-        verbose_name_plural = "Kontakt lister"
+        verbose_name = "Påmeldt deltager"
+        verbose_name_plural = "Medlemsinfo: Deltager påmelding"
 
-    def get_hoved_kontakt_tlf(self):
-        return self.medlem.hoved_kontakt_tlf  # Fetch dynamically
+class BetalingsType(models.Model):
 
-    def get_hoved_kontakt_rolle(self):
-        return self.medlem.hoved_kontakt_rolle
-
-    def get_foto_tillatelse(self):
-        return self.medlem.foto_tillatelse
-
-    def get_annet(self):
-        return self.medlem.annet
-
-    get_hoved_kontakt_tlf.short_description = "Hovedkontakt Tlf"
-    get_hoved_kontakt_rolle.short_description = "Hovedkontakt Rolle"  # Admin column title
-    get_foto_tillatelse.short_description = "Fototillatelse"
-    get_annet.short_description = "Annen info"
+# Kanskje hele denne skal flyttes og brukes i MedlemPameldt for å sortere mellom standard, drop-in og støtte?
+# Trenger den å være synlig admin side eller kan den være skjult i koden?
+    """
+    Måter folk kan betale for deltagelse på aktiviteter.
+    
+    Brukes av:
+    Betalingstatus - for å sette hvordan deltagere har betalt.
+    """
+    navn = models.CharField(max_length=30)
     
     def __str__(self):
-        return f"Kontaktinfo til {self.medlem}"
-
-# End 4/3:  I've done what I will in the db, now I need to get it working admin side.
-
-class TimeListePersonell(models.Model):
-    personell = models.ForeignKey(Personell, on_delete = models.PROTECT)
-    aktivitet = models.ForeignKey(Aktivitet, on_delete = models.PROTECT)
-    dato_gjennomført = models.DateField()
-
+        return self.navn
+    
     class Meta:
-        unique_together = ('personell', 'aktivitet', 'dato_gjennomført')
-        verbose_name = "Timeliste for personell"
-        verbose_name_plural = "Timeliste for personell"
+        verbose_name = "Betalingstype"
+        verbose_name_plural = "Medlemsinfo: Betalingstyper"
+
+class BetalingStatus(models.Model):
+
+# Vil trenge et filter på status_betaling
+# Rabatt flyttes til MedlemPameldt.
+    """
+    Oversikt over hvem som har betalt(MedlemPameldt.drop_in = False), hvor mye og hvordan(BetalingsType).
+    Drop-in har egen tabell. Aktivitet tabel brukes for å regne ut hvor mye de skal betale.
+    
+    Planlagt brukt i flere tabeller/funksjoner forbi fase 1.
+    """
+    medlem_pameldt = models.ForeignKey(MedlemPameldt, on_delete=models.PROTECT)
+    type_betaling = models.ForeignKey(BetalingsType, on_delete=models.PROTECT)
+    original_pris = models.PositiveIntegerField()
+    rabatt = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(1)], help_text="Prosentrabatt: skriv in et tall mellom 0 og 1. Eks. 0.70 = 70%.")
+    endelig_pris = models.PositiveIntegerField()
+    status_betaling = models.BooleanField(default=False)
 
     def __str__(self):
-        return f'{self.personell} jobbet på {self.aktivitet} den {self.dato_gjennomført}'
+        return f"{self.medlem_pameldt} - Status: {self.status_betaling}"
+
+    def save(self, *args, **kwargs):
+
+        # Regner ut en pris basert på en prosent rabatt
+        self.original_pris = self.medlem_pameldt.aktivitet.pris_vanlig
+        self.endelig_pris = self.original_pris*(1-self.rabatt)
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Betaling status"
+        verbose_name_plural = "Medlemsinfo: Betaling status"
 
 
-# Del 4: Økonomi tabeller - brukes av økonomisk ansvarlig
+class AktivitetDatoer(models.Model):
+    """
+    Oversikt over alle datoer en aktivitet(Aktivitet) går på.
+    
+    Automatisk generert og justert mellom tabell som ikke er synlig i Admin.
+    
+    Brukes av:
+    DeltagerOppmote - for datoer deltagere skal noteres tilstedeværelse på.
+    PersonellOppmote - for datoer personell skal noteres tilstedeværelse på.
+    """
+    aktivitet = models.ForeignKey(Aktivitet, on_delete=models.PROTECT, related_name='aktivitet_datoer')
+    dato = models.DateField()
+    
+    class Meta:
+        ordering = ['dato']
+        unique_together = ['aktivitet', 'dato']
+        verbose_name = "Aktivitets dato"
+        verbose_name_plural = "Aktivitetsinfo: Aktivitets datoer"
+    
+    def __str__(self):
+        return f"{self.aktivitet} {self.dato}"
+    
+    class Meta:
+        verbose_name = "Datoer for aktivitet"
+        verbose_name_plural = "Aktivitetsinfo: Datoer for aktiviteten"
 
-# Im waiting with this because I will be getting a lot of info from a lot of places and I dont know how
-# the apis might be connecting
 
-# Deltagere og betalinger
-# Attr: medlem, aktivitet, aktivitet.pris, noen prisreduskjoner, når betaling ble gjennomført, hvor betalt: dnb, vipps, kontant
+class DeltagerOppmote(models.Model):
 
-# Kontrakt info - goes out to a contract you can send - with checkboxes for what is already sent out
+# Hadde vært fint å kunne filterer etter aktivtet og så vise en oppmøte tabell der 1 medlem kobles til 1 rad der dens oppmøte vises
+    """
+    Oversikt over oppmøte til aktivitets deltagere(MedlemPameldt) på spesifikke datoer(AktivitetDatoer).
+    
+    Brukes av:
+    BetalingStatusDropIn - datoer deltager er tilstede skapes i tabellen for å kontrollerer betaling.
+    """
+    aktivitet_datoer = models.ForeignKey(AktivitetDatoer, on_delete=models.PROTECT)
+    medlem_pameldt = models.ForeignKey(MedlemPameldt, on_delete=models.PROTECT)
+    tilstede = models.BooleanField(default=False)
 
-# Ansatte og utbetalt/opptjent lønn - goes out to lønnslipper - with checkboxes for utbetalt lønn
-# Maybe fields are opptjent i periode, skattet, utbetalt, rabattert(when we don't have enough to run full pay)
+    def __str__(self):
+        return f"{self.medlem_pameldt.medlem} {self.aktivitet_datoer.dato}"
+    
+    class Meta:
+        verbose_name = "Deltager oppmøte"
+        verbose_name_plural = "Medlemsinfo: Deltager oppmøte"
 
+class PersonellOppmote(models.Model):
+
+# Denne vil trenge en del filter funskjoner basert på diverse foreldre og på utbetalt_lonn.
+# I tilegg til en knapp for å bekrefte utbetalelse før hele systemet er på plass.
+    """
+    Oversikt over hvem(PersonellRolle) som jobbet på hvilken aktivitet på en spesifikk dato(AktivitetDatoer).
+    
+    Planlagt brukt i flere tabeller forbi fase 1.
+    """
+    aktivitet_datoer = models.ForeignKey(AktivitetDatoer, on_delete=models.PROTECT)
+    personel_rolle = models.ForeignKey(PersonellRolle, on_delete=models.PROTECT)
+    utbetalt_lonn = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.personel_rolle} {self.aktivitet_datoer} - Status utbetaling: {self.utbetalt_lonn}"
+
+    class Meta:
+        verbose_name = "Personell oppmøte"
+        verbose_name_plural = "Personellinfo: Personell oppmøte"
+
+class BetalingStatusDropIn(models.Model):
+
+# Vil trenge en filter funksjon på status_betaling, deltager navn
+# Vil og trenge en generator funskjon som oppdatereres ukentlig basert på x
+# Skal rabatt funksjonene legges i MedlemPameldt isteden og så heller brukes til utregning i BetalingStatus og BetalingStatusDropIn?
+    """
+    Oversikt over alle(MedlemPameldt.drop_in = True) som betaler drop-in og hvilken datoer de har vært tilstede(DeltagerOppmote) og betalt for.
+    
+    Planlagt brukt i flere tabeller forbi fase 1.
+    """
+    deltager_oppmote = models.ForeignKey(DeltagerOppmote, on_delete=models.PROTECT)
+    dato = models.DateField()
+    original_pris = models.PositiveIntegerField()
+    rabatt = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(1)], help_text="Prosentrabatt: skriv in et tall mellom 0 og 1. Eks. 0.70 = 70%.")
+    endelig_pris = models.PositiveIntegerField()
+    status_betaling = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.deltager_oppmote} - Status: {self.status_betaling}"
+
+    def save(self, *args, **kwargs):
+
+        # Regner ut en pris basert på en prosent rabatt
+        self.original_pris = self.deltager_oppmote.aktivitet_datoer.aktivitet.pris_drop_in
+        self.endelig_pris = self.original_pris*(1-self.rabatt)
+
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Betaling status drop-in"
+        verbose_name_plural = "Medlemsinfo: Betaling status drop-in"
+
+
+
+# Legg til en tilskudd/støtte tabell forbi fase 1
+# Forbi en viss fase legg inn statistikk funksjoner
