@@ -1,4 +1,11 @@
 {% extends "hjemmeside/base.html" %}
 {% block content %}
-    <h1>pamelding</h1>
+    <h1>Påmelding</h1>
+    <p>Til: {{ selected_activity }}</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Meld deg på</button>
+    </form>
 {% endblock content %}

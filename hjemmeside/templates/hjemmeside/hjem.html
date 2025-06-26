@@ -1,4 +1,42 @@
 {% extends "hjemmeside/base.html" %}
 {% block content %}
-    <h1>hjemmeside</h1>
+   {% for aktivitet in aktiviteter %}
+        <div class="activity-item">
+            <h1 class="activity-title" onclick="toggleActivity({{ forloop.counter0 }})">
+                {{ aktivitet }} <span class="toggle-arrow" id="arrow-{{ forloop.counter0 }}">▼</span>
+            </h1>
+            <div class="activity-details" id="activity-{{ forloop.counter0 }}" style="display: none;">
+                <p>Fra kl.{{ aktivitet.kl_start }} til kl.{{ aktivitet.kl_slutt }}</p>
+                <p>Ledige plasser: {{ aktivitet.ledige_plasser }}</p>
+                <p>Pris: {{ aktivitet.pris_vanlig }}</p>
+                <p>Antall ganger: {{ aktivitet.antall_ganger }}</p>
+                <p>Slutt dato: {{ aktivitet.slutt_dato }}</p>
+                <form method="post" action="{% url 'hjem' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="activity_id" value="{{ aktivitet.id }}">
+                    <button type="submit">Meld deg på</button>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+
+    <a href="{% url 'kontakt' %}">
+        <button>Kontaktskjema</button>
+    </a>
+
+<script>
+function toggleActivity(index) {
+    const details = document.getElementById('activity-' + index);
+    const arrow = document.getElementById('arrow-' + index);
+    
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        details.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+}
+
+</script>
 {% endblock content %}

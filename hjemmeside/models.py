@@ -124,7 +124,7 @@ class Personell(models.Model):
     Har all informasjon om personer som gjør frivillig eller lønnet arbeid for foreningen.
     
     Brukes av:
-    PersonellRolle - hvilken rolelr personen opptrer i.
+    PersonellRolle - hvilken roller personen opptrer i.
 
     Brukes i andre ting i senere faser.
     """
@@ -597,3 +597,52 @@ class BetalingStatusDropIn(models.Model):
 
 # Legg til en tilskudd/støtte tabell forbi fase 1
 # Forbi en viss fase legg inn statistikk funksjoner
+
+class Bilde(models.Model):
+    """
+    Bilder som kan vises på siden.
+    """
+    bilde = models.ImageField(upload_to='bilder/')
+    alternativ_tekst = models.CharField(max_length=100)
+    rekkefolge = models.IntegerField()
+    # Set up logic on admin side to both cut the picture to the right size and to make sure it gets a unique order
+    i_bruk = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.alternativ_tekst
+
+    class Meta:
+        verbose_name = "Bilde"
+        verbose_name_plural = "Bilder"
+        ordering = ['rekkefolge']
+
+class ForeningInfo(models.Model):
+    """
+    Informasjon om foreningen som vises på siden. Skal samstemme med det som er regisrert i brreg.no.
+    """
+
+    organisasjon_navn = models.CharField(max_length=40, default="Bergen Parkour")
+    adresse = models.CharField(max_length=100)
+    post_nummer = models.CharField(max_length=40)
+    organisasjon_nummer = models.CharField(max_length=9, validators=[kun_tall_validator], default="923132228")
+    kontakt_tlf = models.CharField(max_length=8, validators=[kun_tall_validator])
+    kontakt_mail = models.CharField(max_length=40, default="bergen.parkour@gmail.com")
+    facebook_side = models.CharField(max_length=20, default="Bergenparkour")
+    instagram_side = models.CharField(max_length=20, default="bergenparkour")
+    om_foreningen = models.TextField()
+    i_bruk = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Informasjon om foreningen"
+        verbose_name_plural = "Informasjon om foreningen"
+
+class GenerellKursInfo(models.Model):
+    """
+    Generell informasjon brukere får før påmelding.
+    """
+    informasjon = models.JSONField()
+    i_bruk = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Informasjon om kursene"
+        verbose_name_plural = "Informasjon om kursene"

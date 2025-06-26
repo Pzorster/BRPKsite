@@ -3,12 +3,14 @@ body {
     color: #000000;
     margin-top: 0; /* Remove the top margin if it's not needed */
     padding: 10px; /* Add padding to create a gap from the top of the page */
+    font-family: 'Ubuntu', 'Roboto', 'Arial', 'Helvetica', sans-serif;
 }
 
-.header-bar {
+header {
     background-color: #00c8ff; /* Light blue background color */
     padding: 10px 20px; /* Vertical and horizontal padding */
     margin-top: 10px; /* Creates a gap from the top of the page */
+    margin-left: -20px;
     display: flex; /* Use flexbox for vertical alignment */
     align-items: center; /* Center text vertically */
     height: 50px; /* Optional: fixed height for consistency */
@@ -20,4 +22,8 @@ body {
 .menu-icon {
     width: 25px; /* Adjust size of the image */
     height: auto; /* Maintain aspect ratio */
+}
+
+footer {
+    background-color: #00c8ff;
 }

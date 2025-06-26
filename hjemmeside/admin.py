@@ -25,6 +25,9 @@ admin.site.register(MalgruppeAktivitet)
 admin.site.register(DatoerSomUtgar)
 admin.site.register(Rolle)
 admin.site.register(ForesporselKategori)
+admin.site.register(ForeningInfo)
+admin.site.register(Bilde)
+admin.site.register(GenerellKursInfo)
 
 # Part 2 - Small aditional functions
 class PersonellAdmin(admin.ModelAdmin):

@@ -19,7 +19,7 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('hjemmeside.urls'), name='hjem')
+    path('', include('hjemmeside.urls'))
 ]
 
 # Note: du kan refere paths gjennom "include" funksjonen eller hardcode de inn ved å importere de. Siste er best for små prosjekter, ikke store.

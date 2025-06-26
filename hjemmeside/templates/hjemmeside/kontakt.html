@@ -1,4 +1,10 @@
 {% extends "hjemmeside/base.html" %}
 {% block content %}
-    <h1>kontakt</h1>
+    <h1>Kontaktskjema</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Send forespørsel</button>
+    </form>
 {% endblock content %}
