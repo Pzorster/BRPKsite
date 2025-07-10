@@ -402,12 +402,19 @@ class KundeKontakt(models.Model):
     
     Planlagt bruk flere steder forbi fase 1.
     """
+
+    status = (
+        ('Motatt', 'Motatt'),
+        ('Pågående', 'Pågående'),
+        ('Ferdig', 'Ferdig')
+    )
+    navn = models.CharField(max_length = 30)
     mail = models.EmailField(max_length = 100)
     tlf = models.CharField(max_length = 8,  validators = [kun_tall_validator])
     kategori = models.ForeignKey(ForesporselKategori, on_delete = models.PROTECT)
     detaljer = models.TextField()
     dato = models.DateField(auto_now_add = True)
-    fulgt_opp = models.BooleanField(default = False)
+    fulgt_opp = models.CharField(max_length=10, choices=status)
 
     def __str__(self):
         return f'{self.kategori} - {self.dato}'
