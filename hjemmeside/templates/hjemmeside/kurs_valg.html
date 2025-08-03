@@ -1,4 +1,130 @@
 {% extends "hjemmeside/base.html" %}
 {% block content %}
-    <h1>Om oss</h1>
+    <!-- <div class="activity-selection-page">
+        <div class="activity-filter">
+            {% for filter_key, filter_data in filtre.items %}
+                <div class="filter">
+                    <select name="{{ filter_key }}" id="{{ filter_key }}-select" class="specific-filter">
+                        <option value="">Velg {{ filter_data.label }}</option>
+                        {% for value in filter_data.values %}
+                            <option value="{{ value }}">{{ value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endfor %}
+        </div> -->
+            
+        <div class="activities">
+            {% for item in aktiviteter_with_data %}
+                <div class="activity-item closed"
+                    {% for key, value in item.data_attrs.items %}data-{{ key }}="{{ value}}" {% endfor %}
+                    id="activity-item-{{ forloop.counter0 }}">
+                    <h1 class="activity-title" onclick="toggleActivity({{ forloop.counter0 }})">
+                        {{ item.aktivitet.ukedag }} {{ item.aktivitet.sted }} {{ item.aktivitet.malgruppe.alder_eller_klasse }}
+                        <span class="toggle-arrow" id="arrow-{{ forloop.counter0 }}">▼</span>
+                    </h1>
+                    <div class="activity-details" id="activity-{{ forloop.counter0 }}" style="display: none;">
+                        <p>Fra kl.{{ item.aktivitet.kl_start|time:"H:i" }} til kl.{{ item.aktivitet.kl_slutt|time:"H:i" }} - Fra {{ item.aktivitet.start_dato|date:"j. F"|title }} til {{ item.aktivitet.slutt_dato|date:"j. F"|title }}</p>
+                        <p>Antall ganger: {{ item.aktivitet.antall_ganger }} - Instruktør: {{ item.aktivitet.personell_roll }}</p>
+                        <p>Ledige plasser: {{ item.aktivitet.ledige_plasser }} - Pris: {{ item.aktivitet.pris_vanlig }}</p>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="activity_id" value="{{ item.aktivitet.id }}">
+                            <button type="submit">Meld deg på</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script id="activity-display-logic">
+        function toggleActivity(index) {
+            const details = document.getElementById('activity-' + index);
+            const details2 = document.getElementById('activity-item-' + index);
+            const arrow = document.getElementById('arrow-' + index);
+            
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                details2.classList.remove('closed'); 
+                arrow.textContent = '▲';
+            } else {
+                details.style.display = 'none';
+                details2.classList.add('closed');
+                arrow.textContent = '▼';
+            }
+        }
+
+    </script>
+
+    <!-- <script id="activity-filter-logic">
+
+        // Store original filter data  
+        const originalFilters = {{ filtre|safe }};
+
+        // Common filter change handler
+        function handleFilterChange() {
+            // Save all current filter values
+            const currentFilters = {};
+            document.querySelectorAll('.specific-filter').forEach(select => {  // Updated class
+                const filterType = select.name.toLowerCase();  // Convert to match dataset
+                currentFilters[filterType] = select.value;
+            });
+            
+            // Get activities that match current filters
+            const validActivities = Array.from(document.querySelectorAll('.activity-item')).filter(item => {
+                return Object.entries(currentFilters).every(([filterType, filterValue]) => {
+                    if (!filterValue) return true; // Empty filter = show all
+                    return item.dataset[filterType] === filterValue;
+                });
+            });
+            
+            // Update filter options based on valid activities
+            Object.keys(originalFilters).forEach(filterType => {
+                updateFilterOptions(filterType, validActivities, currentFilters[filterType.toLowerCase()]);
+            });
+            
+            // Show/hide activities
+            filterActivities(currentFilters);
+        }
+
+        function updateFilterOptions(filterType, validActivities, currentValue) {
+            const select = document.getElementById(filterType + '-select');
+            const validValues = new Set();
+            
+            // Collect values from valid activities
+            validActivities.forEach(activity => {
+                validValues.add(activity.dataset[filterType.toLowerCase()]);
+            });
+            
+            // Rebuild options
+            const label = originalFilters[filterType].label;
+            select.innerHTML = `<option value="">Velg ${label}</option>`;
+            
+            originalFilters[filterType].values.forEach(value => {
+                if (validValues.has(value)) {
+                    const selected = value === currentValue ? 'selected' : '';
+                    select.innerHTML += `<option value="${value}" ${selected}>${value}</option>`;
+                }
+            });
+        }
+
+        function filterActivities(currentFilters) {
+            document.querySelectorAll('.activity-item').forEach(item => {
+                const matches = Object.entries(currentFilters).every(([filterType, filterValue]) => {
+                    if (!filterValue) return true;
+                    return item.dataset[filterType] === filterValue;
+                });
+                
+                item.style.display = matches ? 'block' : 'none';
+            });
+        }
+
+        // Set up listeners for all filters
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.specific-filter').forEach(select => {  // Updated class
+                select.addEventListener('change', handleFilterChange);
+            });
+        });
+    </script> -->
 {% endblock content %}

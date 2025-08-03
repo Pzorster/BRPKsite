@@ -189,6 +189,7 @@ class Aktivitet(models.Model):
     pris_vanlig = models.PositiveIntegerField()
     pris_drop_in = models.PositiveIntegerField()
     dag_interval = models.PositiveIntegerField()
+
     
     # Tids statusen for aktiviteten
     STATUS_KOMMENDE = 'Kommende'
@@ -204,6 +205,22 @@ class Aktivitet(models.Model):
             (STATUS_AVSLUTTET, 'Avsluttet'),
         ]
     )
+
+    @property
+    def ukedag(self):
+        """Returns Norwegian weekday name for start_dato"""
+        norske_ukedager = [
+            'Mandag',    # 0
+            'Tirsdag',   # 1
+            'Onsdag',    # 2
+            'Torsdag',   # 3
+            'Fredag',    # 4
+            'Lørdag',    # 5
+            'Søndag'     # 6
+        ]
+        
+        dag_nummer = self.start_dato.weekday()  # Returns 0-6 (Monday=0)
+        return norske_ukedager[dag_nummer]
     
     # Regner ut ledige plasser for aktiviteteten
     @property
@@ -414,7 +431,7 @@ class KundeKontakt(models.Model):
     kategori = models.ForeignKey(ForesporselKategori, on_delete = models.PROTECT)
     detaljer = models.TextField()
     dato = models.DateField(auto_now_add = True)
-    fulgt_opp = models.CharField(max_length=10, choices=status)
+    fulgt_opp = models.CharField(max_length=10, choices=status, default='Motatt')
 
     def __str__(self):
         return f'{self.kategori} - {self.dato}'
@@ -609,10 +626,11 @@ class Bilde(models.Model):
     """
     Bilder som kan vises på siden.
     """
-    bilde = models.ImageField(upload_to='bilder/')
+    bilde = models.ImageField(upload_to='images/')
     alternativ_tekst = models.CharField(max_length=100)
     rekkefolge = models.IntegerField()
     # Set up logic on admin side to both cut the picture to the right size and to make sure it gets a unique order
+    # Probably easier to just tell people that it needs to be a certain size and parameters for them to upload it....
     i_bruk = models.BooleanField(default=True)
 
     def __str__(self):

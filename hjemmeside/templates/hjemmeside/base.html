@@ -7,7 +7,8 @@
 
     <!-- Load Ubuntu font-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" type="text/css" href="{% static 'hjemmeside/new_main.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'hjemmeside/base.css' %}">
+    {% block specific_css %}{% endblock %}
     
     <title>Bergen Parkour</title>
 
@@ -26,12 +27,24 @@
                         </a>
                         <div class="dropdown-menu">
                             {% for dropdown_item in item.dropdown_items %}
-                                <a href="{% url dropdown_item.url %}" class="dropdown-item {% if request.resolver_match.url_name == dropdown_item.url %}active{% endif %}">
-                                    {{ dropdown_item.name }}
-                                </a>
+                                {% if dropdown_item.anchor %}
+                                    <a href="{{ dropdown_item.url}}#{{ dropdown_item.anchor }}" class="dropdown-item">
+                                        {{ dropdown_item.name }}
+                                    </a>
+                                {% else %}
+                                    <a href="{% url dropdown_item.url %}" class="dropdown-item {% if request.resolver_match.url_name == dropdown_item.url %}active{% endif %}">
+                                        {{ dropdown_item.name }}
+                                    </a>
+                                {% endif %}
                             {% endfor %}
                         </div>
                     </div>
+                
+                {% elif item.anchor %}
+                        <a href="{{ item.url}}#{{ item.anchor }}" class="nav-item">
+                        {{ item.name }}
+                    </a>
+
                 {% else %}
                     <a href="{% url item.url %}" class="nav-item {% if request.resolver_match.url_name == item.url %}active{% endif %}">
                         {{ item.name }}
@@ -69,27 +82,33 @@
             <p>Mail: {{ footer_info.kontakt_mail }}, Tlf: {{ footer_info.kontakt_tlf }}</p>
         </div>                
     </footer>
-
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js-->
-    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.12.9/dist/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-    <script>
-        $(document).ready(function() {
-             // Clone social links on page load (hidden)
-            $('.social-links').clone().appendTo('.main-nav').addClass('mobile-social').hide();
     
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Clone social links on page load (hidden)
+            const socialLinks = document.querySelector('.social-links');
+            const clonedSocial = socialLinks.cloneNode(true);
+            clonedSocial.classList.add('mobile-social');
+            clonedSocial.style.display = 'none';
+            document.querySelector('.main-nav').appendChild(clonedSocial);
+
             // Hamburger click toggle
-            $('.menu-button').click(function() {
-                $('.main-nav').toggleClass('mobile');
-                $('.mobile-social').toggle();
+            document.querySelector('.menu-button').addEventListener('click', function() {
+                document.querySelector('.main-nav').classList.toggle('mobile');
+                
+                const mobileSocial = document.querySelector('.mobile-social');
+                if (mobileSocial.style.display === 'none') {
+                    mobileSocial.style.display = 'block';
+                } else {
+                    mobileSocial.style.display = 'none';
+                }
             });
             
             // Remove mobile class on resize to desktop
-            $(window).resize(function() {
-                if ($(window).width() > 768) {
-                    $('.main-nav').removeClass('mobile');
-                    $('.mobile-social').hide();
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 768) {
+                    document.querySelector('.main-nav').classList.remove('mobile');
+                    document.querySelector('.mobile-social').style.display = 'none';
                 }
             });
         });

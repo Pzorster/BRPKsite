@@ -1,42 +1,199 @@
 {% extends "hjemmeside/base.html" %}
+
+{% load static %}
+
+{% block specific_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'hjemmeside/hjem.css' %}">
+{% endblock specific_css %}
+
 {% block content %}
-   {% for aktivitet in aktiviteter %}
-        <div class="activity-item">
-            <h1 class="activity-title" onclick="toggleActivity({{ forloop.counter0 }})">
-                {{ aktivitet }} <span class="toggle-arrow" id="arrow-{{ forloop.counter0 }}">▼</span>
-            </h1>
-            <div class="activity-details" id="activity-{{ forloop.counter0 }}" style="display: none;">
-                <p>Fra kl.{{ aktivitet.kl_start }} til kl.{{ aktivitet.kl_slutt }}</p>
-                <p>Ledige plasser: {{ aktivitet.ledige_plasser }}</p>
-                <p>Pris: {{ aktivitet.pris_vanlig }}</p>
-                <p>Antall ganger: {{ aktivitet.antall_ganger }}</p>
-                <p>Slutt dato: {{ aktivitet.slutt_dato }}</p>
-                <form method="post" action="{% url 'hjem' %}">
-                    {% csrf_token %}
-                    <input type="hidden" name="activity_id" value="{{ aktivitet.id }}">
-                    <button type="submit">Meld deg på</button>
-                </form>
+
+    <div class="welcome-image">
+        {% for bilde in bilder %}
+            <img src="{{ bilde.bilde.url }}" alt="{{ bilde.alternativ_tekst}}">
+        {% endfor %}
+        <h3 class="tagline">MINE SPOR -- MIN BY</h3>
+    </div>
+
+    <div id="aktiviteter" class="timeplan">
+        <h1>Våre aktiviteter</h1>
+        <p>Trykk på aktivitet for mer info og påmelding</p>
+
+        {% if semesterkurs %}
+            <div class="semesterkurs">
+                <h1 class="semesterkurs-tittel" onclick="toggleSection('semesterkurs')">
+                    Semesterkurs
+                    <span class="toggle-arrow" id="arrow-semesterkurs">▼</span>
+                </h1>
+                <div class="semesterkurs-content" id="content-semesterkurs">
+                    <div class="semesterkurs-header">
+                        <p>Ukedag</p>
+                        <p>Sted</p>
+                        <p>Gruppe</p>
+                        <p>Tid</p>
+                    </div>
+
+                    {% for aktivitet in semesterkurs %}
+                        <div class="semesterkurs-item">
+                            <div class="aktiviteter-semesterkurs-item" onclick="toggleSection('activity-{{ aktivitet.id }}')">
+                                <span class="toggle-arrow" id="arrow-activity-{{ aktivitet.id }}">▼</span>
+                                <p>{{ aktivitet.ukedag }}</p>
+                                <p>{{ aktivitet.sted }}</p>
+                                
+                            </div>
+
+                            <div class="activity-details" id="content-activity-{{ aktivitet.id }}" style="display: none;">
+                                <p>{{ aktivitet.malgruppe }}</p>
+                                <p>kl.{{ aktivitet.kl_start|time:"H:i" }}-{{ aktivitet.kl_slutt|time:"H:i" }}</p>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="activity_id" value="{{ aktivitet.id }}">
+                                    <button type="submit">Meld deg på</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+
+                </div>
             </div>
-        </div>
-    {% endfor %}
+        {% endif %}
+
+        {% if feriekurs %}
+            <div class="feriekurs">
+                <h1 class="feriekurs-tittel" onclick="toggleSection('feriekurs')">
+                    Feriekurs
+                    <span class="toggle-arrow" id="arrow-feriekurs">▼</span>
+                </h1>
+                <div class="feriekurs-content" id="content-feriekurs">
+                    <div class="feriekurs-header">
+                        <p>Ukedag</p>
+                        <p>Sted</p>
+                        <p>Gruppe</p>
+                        <p>Tid</p>
+                    </div>
+
+                    {% for aktivitet in feriekurs %}
+                        <div class="feriekurs-item">
+                            <div class="aktiviteter-feriekurs-item" onclick="toggleSection('activity-{{ aktivitet.id }}')">
+                                <span class="toggle-arrow" id="arrow-activity-{{ aktivitet.id }}">▼</span>
+                                <p>{{ aktivitet.ukedag }}</p>
+                                <p>{{ aktivitet.sted }}</p>
+                                
+                            </div>
+
+                            <div class="activity-details" id="content-activity-{{ aktivitet.id }}" style="display: none;">
+                                <p>{{ aktivitet.malgruppe }}</p>
+                                <p>kl.{{ aktivitet.kl_start|time:"H:i" }}-{{ aktivitet.kl_slutt|time:"H:i" }}</p>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="activity_id" value="{{ aktivitet.id }}">
+                                    <button type="submit">Meld deg på</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                        
+                </div>
+            </div>
+        {% endif %}
+
+        {% if andre %}
+            <div class="andre">
+                <h1 class="andre-tittel" onclick="toggleSection('andre')">
+                    Andre aktiviteter
+                    <span class="toggle-arrow" id="arrow-andre">▼</span>
+                </h1>
+                <div class="andre-content" id="content-andre">
+                    <div class="andre-header">
+                        <p>Ukedag</p>
+                        <p>Sted</p>
+                        <p>Gruppe</p>
+                        <p>Tid</p>
+                    </div>
+
+                    {% for aktivitet in andre %}
+                        <div class="andre-item">
+                            <div class="aktiviteter-andre-item" onclick="toggleSection('activity-{{ aktivitet.id }}')">
+                                <span class="toggle-arrow" id="arrow-activity-{{ aktivitet.id }}">▼</span>
+                                <p>{{ aktivitet.ukedag }}</p>
+                                <p>{{ aktivitet.sted }}</p>
+                                
+                            </div>
+
+                            <div class="activity-details" id="content-activity-{{ aktivitet.id }}" style="display: none;">
+                                <p>{{ aktivitet.malgruppe }}</p>
+                                <p>kl.{{ aktivitet.kl_start|time:"H:i" }}-{{ aktivitet.kl_slutt|time:"H:i" }}</p>
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="activity_id" value="{{ aktivitet.id }}">
+                                    <button type="submit">Meld deg på</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% endfor %}
+                        
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div id="om-oss" class="om-oss">
+        <h1>Om foreningen</h1>
+        <p>Foreningen ble stiftet i 2019 og har som formål å ivareta og utvikle parkour-miljøet i Bergen på grunnlag av parkourens egenart.
+        </p>
+        <p>
+            Dette kan i praksis bety mye forsjellig. Hittil har vi:
+            <ol>- Hatt organiserte parkour aktiviteter og uformelle samlinger</ol>
+            <ol>- Etablert samarbeid med flere kommunale etater, i tillegg til andre organisasjoner</ol>
+            <ol>- Vært involvert i prosessen rundt bygging av parkour parker</ol>
+            <ol>- Besøkt andre miljøer i Stord, Oslo og Danmark</ol>
+            <ol>- Bygget opp den lokal kunnskapsbanken rundt parkour, både når det gjelder bevegelsene og risikovurdering</ol>
+            For mer detaljer eller dersom dere ønsker å samarbeide om noe så er det bare å ta kontakt.
+        </p>
+    </div>
 
     <a href="{% url 'kontakt' %}">
-        <button>Kontaktskjema</button>
+        <button>Lurer du på noe? Spør oss her.</button>
     </a>
 
-<script>
-function toggleActivity(index) {
-    const details = document.getElementById('activity-' + index);
-    const arrow = document.getElementById('arrow-' + index);
+    <script class="slideshow">
+            document.addEventListener('DOMContentLoaded', function() {
+                const images = document.querySelectorAll('.welcome-image img');
+                const slideInterval = 2;
+                const totalDuration = images.length * slideInterval;
+                const percentagePerImage = 100 / images.length;
     
-    if (details.style.display === 'none') {
-        details.style.display = 'block';
-        arrow.textContent = '▲';
-    } else {
-        details.style.display = 'none';
-        arrow.textContent = '▼';
-    }
-}
+                const keyframes = `
+                    @keyframes slideshow {
+                        0%, ${percentagePerImage}% { opacity: 1; }
+                        ${percentagePerImage + 0.01}%, 100% { opacity: 0; }
+                    }
+                `;
 
-</script>
+                const style = document.createElement('style');
+                style.textContent = keyframes;
+                document.head.appendChild(style);
+
+                images.forEach((img, index) => {
+                    img.style.animation = `slideshow ${totalDuration}s infinite`;
+                    img.style.animationDelay = `${index * slideInterval}s`;
+                });
+            });
+    </script>
+
+    <script class="activity-information">
+
+        function toggleSection(sectionId) {
+            const content = document.getElementById('content-' + sectionId);
+            const arrow = document.getElementById('arrow-' + sectionId);
+            
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                arrow.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                arrow.textContent = '▼';
+            }
+        }
+    </script>
 {% endblock content %}

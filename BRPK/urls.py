@@ -16,12 +16,24 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('hjemmeside.urls'))
 ]
 
-# Note: du kan refere paths gjennom "include" funksjonen eller hardcode de inn ved å importere de. Siste er best for små prosjekter, ikke store.
-# from brukere import views as brukere_views
-# Inni "urlpatterns": path('register/', brukere_views.register)
+print("=== URLS.PY DEBUG ===")
+print(f"DEBUG setting: {settings.DEBUG}")
+print(f"MEDIA_URL: {settings.MEDIA_URL}")
+print(f"MEDIA_ROOT: {settings.MEDIA_ROOT}")
+
+if settings.DEBUG:
+    media_urls = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += media_urls
+    print(f"Added media URLs: {media_urls}")
+    print(f"Final urlpatterns: {urlpatterns}")
+else:
+    print("DEBUG is False - media not served")
+

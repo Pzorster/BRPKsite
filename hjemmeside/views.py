@@ -5,6 +5,7 @@ from django.core.mail import send_mail
 from .models import *
 from .forms import *
 from datetime import datetime, date
+from decouple import config
 
 def get_forening_info():
     forening_info = ForeningInfo.objects.filter(i_bruk=True).first()
@@ -14,13 +15,16 @@ def get_forening_info():
 # Linked through settings.py/TEMPLATES/OPTIONS/context_processors
 def global_site_context(request):
 
+    # .logo is set for 4 menu bar items in wide view. More items and it will crash into them before
+    # @media (min-width: 1000px) kicks in. FFP.
     menu_items = [
     {'name': 'Hjem', 'url': 'hjem'},
-    {'name': 'Aktiviteter', 'has_dropdown': True, 'dropdown_items': [
-        {'name': 'Påmelding', 'url': 'kurs_valg'},
-        {'name': 'Timeplan', 'url': 'timeplan'},
-    ]},
-    {'name': 'Om oss', 'url': 'om_foreningen'},
+    {'name': 'Timeplan', 'url': 'hjem', 'anchor': 'aktiviteter'},
+    # {'name': 'Aktiviteter', 'has_dropdown': True, 'dropdown_items':[
+    #     {'name': 'Påmelding', 'url': 'kurs_valg'},
+    #     {'name': 'Timeplan', 'url': 'hjem', 'anchor': 'aktiviteter'},
+    # ]},
+    {'name': 'Om oss', 'url': 'hjem', 'anchor': 'om-oss'},
     {'name': 'Kontakt', 'url': 'kontakt'},
     ]
    
@@ -34,36 +38,100 @@ def global_site_context(request):
     return site_data
 
 
-
-# Views for page
 def hjem(request):
-    # Hent data fra databasen
-    bilder = Bilde.objects.filter(i_bruk=True)
-    aktiviteter = Aktivitet.objects.all()[:10]
-    # aktiviteter = Aktivitet.objects.filter(slutt_dato__gte=now().date())
 
     if request.method == 'POST':
-        
         activity_id = request.POST.get('activity_id')
         if activity_id:
             request.session['selected_activity_id'] = activity_id
             return redirect('pamelding')
-    # Pakker de sammen for å sende videre
+        
+
+    bilder = Bilde.objects.filter(i_bruk=True).order_by('rekkefolge')
+    aktiviteter = Aktivitet.objects.all()
+
     pakke = {
         'bilder': bilder,
-        'aktiviteter': aktiviteter,
+        'semesterkurs': [],
+        'feriekurs': [],
+        'andre': []
     }
+
+    for aktivitet in aktiviteter:
+        activity_type = aktivitet.type_aktivitet.type_aktivitet
+        if activity_type == 'Semesterkurs':
+            pakke['semesterkurs'].append(aktivitet)
+        elif activity_type == 'Feriekurs':
+            pakke['feriekurs'].append(aktivitet)
+        else:
+            pakke['andre'].append(aktivitet)
 
     return render(request, 'hjemmeside/hjem.html', pakke)
 
 
 
-def kurs_valg(request):
+# def kurs_valg(request):
 
-    pakke = {
-        'page_title': "Påmeldings informasjon",
-    }
-    return render(request, 'hjemmeside/kurs_valg.html', pakke)
+#     if request.method == 'POST':
+#         activity_id = request.POST.get('activity_id')
+#         if activity_id:
+#             request.session['selected_activity_id'] = activity_id
+#             return redirect('pamelding')
+        
+
+#     aktiviteter = Aktivitet.objects.all()#[:10]
+
+#     def get_nested_attr(obj, attr_path):
+#         attrs=attr_path.split('.')
+#         for attr in attrs:
+#             obj = getattr(obj, attr)
+#         return obj
+
+#     attr_filter = {
+#         'Alder': 'malgruppe.alder_eller_klasse', 
+#         'Sted': 'sted.omrade',
+#         'Ukedag': 'ukedag',
+#         }
+    
+#     filtre = {}
+
+#     for filter_name, attr_path in attr_filter.items():
+#         if filter_name not in filtre:
+#             filtre[filter_name] = set()
+        
+#         for aktivitet in aktiviteter:
+#             try:
+#                 value = get_nested_attr(aktivitet, attr_path)
+#                 filtre[filter_name].add(value)
+#             except AttributeError:
+#                 print(f"Could not access {attr_path} on {aktivitet}")
+
+#     for filter_name in filtre:
+#         filtre[filter_name] = {
+#             'label': filter_name,
+#             'values': sorted(list(filtre[filter_name]))
+#         }
+
+#     aktiviteter_with_data = []
+#     for aktivitet in aktiviteter:
+#         data_attrs = {}
+#         for data_key, attr_path in attr_filter.items():
+#             try:
+#                 data_attrs[data_key] = get_nested_attr(aktivitet, attr_path)
+#             except AttributeError:
+#                 data_attrs[data_key]= ""
+
+#         aktiviteter_with_data.append({
+#             'aktivitet': aktivitet,
+#             'data_attrs': data_attrs,
+#         })
+
+#     pakke = {
+#         'aktiviteter_with_data': aktiviteter_with_data,
+#         'filtre': filtre,
+#     }
+    
+#     return render(request, 'hjemmeside/kurs_valg.html', pakke)
 
 
 
@@ -102,28 +170,6 @@ def pamelding(request):
     }
 
     return render(request, 'hjemmeside/pamelding.html', pakke)
-
-
-
-def timeplan(request):
-
-    pakke = {
-
-    }
-
-    return render(request, 'hjemmeside/timeplan.html', pakke)
-
-
-
-def om_foreningen(request):
-
-    pakke = {
-
-    }
-
-    return render(request, 'hjemmeside/om_foreningen.html', pakke)
-
-
 
 def kontakt(request):
     form = KundeForesporsel()
@@ -191,7 +237,24 @@ def bekreftelse(request):
         form = KundeForesporsel(data=form_data) 
         if form.is_valid():
             kundekontakt = form.save()
-            print(f"Saved member: {kundekontakt.id}")
+
+            send_mail(
+            subject='Takk for din henvendelse',
+            message=f'''
+Hei {kundekontakt.navn} :)
+
+Vi har mottatt din forespørsel angående {str(kundekontakt.kategori).lower()}. Vi svarer som oftest en gang i uken.
+Om vi trenger å ta kontakt direkte så ringer vi på {kundekontakt.tlf}.
+
+Med vennlig hilsen,
+Bergen Parkour
+
+Informasjonen vi fikk fra deg: "{kundekontakt.detaljer}"''',
+            from_email='bergen.parkour@gmail.com',
+            recipient_list=[kundekontakt.mail],
+            fail_silently=False,  # Will raise error if email fails
+            )
+
             mail = form_data.get('mail')
 
             bekreftelse_tekst = f"""

@@ -7,3 +7,7 @@ Started - 08.03.2025
 Status(10.07.2025):
 - Working on showing and styling all the information on the webpage.
     - Testign automated confirmation mails.
+
+Status(03.08.2025):
+- Probably last commit before summer holiday ends. Have a 3rd iteration of a way to show acitvites and structuring of page.
+    - Next step will be the styling of how the activities are shown.
