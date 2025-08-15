@@ -53,18 +53,15 @@ def hjem(request):
     pakke = {
         'bilder': bilder,
         'semesterkurs': [],
-        'feriekurs': [],
-        'andre': []
+        'kort_aktivitet': []
     }
 
     for aktivitet in aktiviteter:
         activity_type = aktivitet.type_aktivitet.type_aktivitet
         if activity_type == 'Semesterkurs':
             pakke['semesterkurs'].append(aktivitet)
-        elif activity_type == 'Feriekurs':
-            pakke['feriekurs'].append(aktivitet)
         else:
-            pakke['andre'].append(aktivitet)
+            pakke['kort_aktivitet'].append(aktivitet)
 
     return render(request, 'hjemmeside/hjem.html', pakke)
 
@@ -171,7 +168,7 @@ def pamelding(request):
 
     return render(request, 'hjemmeside/pamelding.html', pakke)
 
-def kontakt(request):
+def kontakt(request):    
     form = KundeForesporsel()
 
     if request.method == 'POST':

@@ -189,6 +189,7 @@ class Aktivitet(models.Model):
     pris_vanlig = models.PositiveIntegerField()
     pris_drop_in = models.PositiveIntegerField()
     dag_interval = models.PositiveIntegerField()
+    merknader = models.TextField(blank=True, default="")
 
     
     # Tids statusen for aktiviteten
@@ -239,6 +240,12 @@ class Aktivitet(models.Model):
             return self.STATUS_PAGAENDE
         else:
             return self.STATUS_AVSLUTTET
+        
+    @property
+    def display_price(self):
+        if self.pris_vanlig == 0:
+            return "gratis"
+        return f"{self.pris_vanlig} kr"
     
     # Husker ikke formålet
     def update_status(self):

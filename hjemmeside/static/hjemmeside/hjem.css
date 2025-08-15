@@ -31,6 +31,10 @@
     text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
 }
 
+.timeplan {
+    width: 70vw;
+}
+
 @media (max-width: 768px) {
     .welcome-image { height: 40vh; }
     .tagline {
@@ -38,49 +42,69 @@
         padding: 5px 20px 5px 5px;
         font-size: 16px;
     }
+    .timeplan {
+        width: 100%;
+        margin-left: -1rem;  /* Counteract body padding */
+        margin-right: -1rem;
+    }
+
     .semesterkurs {
         overflow-x: auto;
-        -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS */
-    }
-    
-    .semesterkurs-header,
-    .semesterkurs-item {
-        min-width: 800px; /* prevents columns from cramping */
+        -webkit-overflow-scrolling: touch;
     }
 }
 
 
-.semesterkurs {
+
+.semesterkurs,
+.kort-aktivitet {
     display: flex;
     flex-direction: column;
 }
 
 .semesterkurs-header,
-.semesterkurs-item {
+.aktiviteter-semesterkurs-item,
+.kort-aktivitet-header,
+.aktiviteter-kort-aktivitet-item {
     display: flex;
     flex-direction: row;
     border-bottom: 1px solid #ccc;
 }
 
 .semesterkurs-header p,
-.semesterkurs-item p {
-    flex: 1; /* Equal width columns */
+.aktiviteter-semesterkurs-item p,
+.kort-aktivitet-header p,
+.aktiviteter-kort-aktivitet-item p {
+    flex: 1;
     padding: 10px;
     margin: 0;
 }
 
-.semesterkurs-header {
+.semesterkurs-header,
+.kort-aktivitet-header {
     font-weight: bold;
     background-color: #f5f5f5;
 }
 
-.semesterkurs-item.selectable {
+.aktiviteter-semesterkurs-item,
+.aktiviteter-kort-aktivitet-item {
     cursor: pointer;
 }
-.semesterkurs-item.selectable:hover {
+.aktiviteter-semesterkurs-item:hover,
+.aktiviteter-kort-aktivitet-item:hover {
     background-color: #f0f0f0;
 }
-.semesterkurs-item.selectable:has(input:checked) {
-    background-color: #00c8ff;
-    color: white;
+
+
+.activity-details {
+    text-align: center;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin: 10px 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    
+    width: 100%;
+    box-sizing: border-box;
 }

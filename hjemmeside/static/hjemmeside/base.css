@@ -239,6 +239,7 @@ button {
     background-color: #00c8ff;
     padding: 10px 20px;
     border-radius: 25px;
+    box-shadow: 0 4px 4px rgba(0,0,0,0.2);
 }
 
 button:hover, button:focus {
@@ -271,7 +272,7 @@ footer {
 
 
 /* ==========================================================================
-   4.Specific pages
+   4.Specific pages - not in use? Remove?
    ========================================================================== */
 
 /* Kurs Valg */

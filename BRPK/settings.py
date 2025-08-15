@@ -29,7 +29,7 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['10.111.69.245', 'localhost', 'testserver']
+ALLOWED_HOSTS = ['10.111.69.245', 'localhost', 'testserver', '10.111.68.26']
 
 
 # Application definition
@@ -60,7 +60,9 @@ ROOT_URLCONF = 'BRPK.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / 'templates',
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
