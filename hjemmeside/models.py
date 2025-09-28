@@ -399,8 +399,6 @@ class Medlem(models.Model):
 # Correct class name
 
 class ForesporselKategori(models.Model):
-
-# Skal dette endres fra kategori/beskrivelse til kategori/underkategeori eller kategori i seg selv være k/u eller skal __str__sette de sammen?
     """
     Kategorier som personer kan velge når de sender inn forespørsler gjennom nettsiden.
     
@@ -418,13 +416,12 @@ class ForesporselKategori(models.Model):
         verbose_name_plural = "Forespørselinfo: Kategorier"
 
 class KundeKontakt(models.Model):
-
-# Trenger filter på kateogri, dato, fulgt_opp
-# Trenger mail knapp som tar med seg info over i en mail
+# Future 1: Ønsker mail knapp som tar med seg info over i en mail
+# Future 2: Directly integrated into the site mail
     """
     Forskjellige forespørsler(ForesporselKategori) som kommer inn via nettsiden og kontaktinformasjon til de som sender de inn.
     
-    Planlagt bruk flere steder forbi fase 1.
+    Svares på av admin via Gmail.
     """
 
     status = (
@@ -441,7 +438,7 @@ class KundeKontakt(models.Model):
     fulgt_opp = models.CharField(max_length=10, choices=status, default='Motatt')
 
     def __str__(self):
-        return f'{self.kategori} - {self.dato}'
+        return f'{self.kategori} - {self.dato} - {self.fulgt_opp}'
 
     class Meta:
         verbose_name = "Forspørsel"

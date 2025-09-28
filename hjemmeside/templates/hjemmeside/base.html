@@ -28,7 +28,7 @@
                         <div class="dropdown-menu">
                             {% for dropdown_item in item.dropdown_items %}
                                 {% if dropdown_item.anchor %}
-                                    <a href="{{ dropdown_item.url}}#{{ dropdown_item.anchor }}" class="dropdown-item">
+                                    <a href="#{{ dropdown_item.anchor }}" class="dropdown-item">
                                         {{ dropdown_item.name }}
                                     </a>
                                 {% else %}
@@ -41,9 +41,13 @@
                     </div>
                 
                 {% elif item.anchor %}
-                        <a href="{{ item.url}}#{{ item.anchor }}" class="nav-item">
+                        {% if request.resolver_match.url_name == 'hjem' or request.path == '/' %}
+                            <a href="#{{ item.anchor }}" class="nav-item">
+                        {% else %}
+                            <a href="{% url 'hjem' %}#{{ item.anchor }}" class="nav-item">
+                        {% endif %}
                         {{ item.name }}
-                    </a>
+                        </a>
 
                 {% else %}
                     <a href="{% url item.url %}" class="nav-item {% if request.resolver_match.url_name == item.url %}active{% endif %}">

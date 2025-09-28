@@ -47,7 +47,12 @@ admin.site.register(PersonellRolle, PersonellRolleAdmin)
 # Skal endres
 admin.site.register(Medlem)
 
-admin.site.register(KundeKontakt)
+class KundeKontaktAdmin(admin.ModelAdmin):
+    list_display = ('navn', 'kategori', 'dato', 'fulgt_opp')
+    list_filter = ('kategori', 'fulgt_opp', 'dato')
+    ordering = ('-dato',)
+
+admin.site.register(KundeKontakt, KundeKontaktAdmin)
 admin.site.register(MedlemPameldt)
 admin.site.register(BetalingsType)
 admin.site.register(BetalingStatus)

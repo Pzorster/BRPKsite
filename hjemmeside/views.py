@@ -19,12 +19,12 @@ def global_site_context(request):
     # @media (min-width: 1000px) kicks in. FFP.
     menu_items = [
     {'name': 'Hjem', 'url': 'hjem'},
-    {'name': 'Timeplan', 'url': 'hjem', 'anchor': 'aktiviteter'},
+    {'name': 'Timeplan', 'anchor': 'aktiviteter'},
     # {'name': 'Aktiviteter', 'has_dropdown': True, 'dropdown_items':[
     #     {'name': 'Påmelding', 'url': 'kurs_valg'},
     #     {'name': 'Timeplan', 'url': 'hjem', 'anchor': 'aktiviteter'},
     # ]},
-    {'name': 'Om oss', 'url': 'hjem', 'anchor': 'om-oss'},
+    {'name': 'Om oss', 'anchor': 'om-oss'},
     {'name': 'Kontakt', 'url': 'kontakt'},
     ]
    
@@ -66,72 +66,6 @@ def hjem(request):
     return render(request, 'hjemmeside/hjem.html', pakke)
 
 
-
-# def kurs_valg(request):
-
-#     if request.method == 'POST':
-#         activity_id = request.POST.get('activity_id')
-#         if activity_id:
-#             request.session['selected_activity_id'] = activity_id
-#             return redirect('pamelding')
-        
-
-#     aktiviteter = Aktivitet.objects.all()#[:10]
-
-#     def get_nested_attr(obj, attr_path):
-#         attrs=attr_path.split('.')
-#         for attr in attrs:
-#             obj = getattr(obj, attr)
-#         return obj
-
-#     attr_filter = {
-#         'Alder': 'malgruppe.alder_eller_klasse', 
-#         'Sted': 'sted.omrade',
-#         'Ukedag': 'ukedag',
-#         }
-    
-#     filtre = {}
-
-#     for filter_name, attr_path in attr_filter.items():
-#         if filter_name not in filtre:
-#             filtre[filter_name] = set()
-        
-#         for aktivitet in aktiviteter:
-#             try:
-#                 value = get_nested_attr(aktivitet, attr_path)
-#                 filtre[filter_name].add(value)
-#             except AttributeError:
-#                 print(f"Could not access {attr_path} on {aktivitet}")
-
-#     for filter_name in filtre:
-#         filtre[filter_name] = {
-#             'label': filter_name,
-#             'values': sorted(list(filtre[filter_name]))
-#         }
-
-#     aktiviteter_with_data = []
-#     for aktivitet in aktiviteter:
-#         data_attrs = {}
-#         for data_key, attr_path in attr_filter.items():
-#             try:
-#                 data_attrs[data_key] = get_nested_attr(aktivitet, attr_path)
-#             except AttributeError:
-#                 data_attrs[data_key]= ""
-
-#         aktiviteter_with_data.append({
-#             'aktivitet': aktivitet,
-#             'data_attrs': data_attrs,
-#         })
-
-#     pakke = {
-#         'aktiviteter_with_data': aktiviteter_with_data,
-#         'filtre': filtre,
-#     }
-    
-#     return render(request, 'hjemmeside/kurs_valg.html', pakke)
-
-
-
 def pamelding(request):
 
     activity_id = request.session.get('selected_activity_id')
@@ -168,6 +102,7 @@ def pamelding(request):
 
     return render(request, 'hjemmeside/pamelding.html', pakke)
 
+
 def kontakt(request):    
     form = KundeForesporsel()
 
@@ -193,6 +128,7 @@ def kontakt(request):
     }
 
     return render(request, 'hjemmeside/kontakt.html', pakke)
+
 
 def bekreftelse(request):
     source = request.session.get('source')
@@ -241,7 +177,7 @@ def bekreftelse(request):
 Hei {kundekontakt.navn} :)
 
 Vi har mottatt din forespørsel angående {str(kundekontakt.kategori).lower()}. Vi svarer som oftest en gang i uken.
-Om vi trenger å ta kontakt direkte så ringer vi på {kundekontakt.tlf}.
+Om vi trenger å ta kontakt direkte så ringer vi fra {kundekontakt.tlf}.
 
 Med vennlig hilsen,
 Bergen Parkour
@@ -269,12 +205,14 @@ Informasjonen vi fikk fra deg: "{kundekontakt.detaljer}"''',
 
     return render(request, 'hjemmeside/bekreftelse.html', pakke)
 
+
 def instagram_redirect(request):
     forening_info = get_forening_info() 
-    instagram = 'https://www.instagram.com/'+forening_info.instagram_side
+    instagram = 'https://www.instagram.com/'+forening_info.instagram_side+'/'
     return redirect(instagram)
+
 
 def facebook_redirect(request):
     forening_info = get_forening_info() 
-    facebook = 'https://www.facebook.com/'+forening_info.facebook_side
+    facebook = 'https://www.facebook.com/'+forening_info.facebook_side+'/'
     return redirect(facebook)
