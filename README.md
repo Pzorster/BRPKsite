@@ -1,5 +1,13 @@
 (Work in progress)Website for the organisation Bergen Parkour(NO) using Python/Django.
 
+Status(6.10.2025):
+- Finished this round of refactoring the DB models.
+- You can find the current db in my_models.png
+Next:
+- Checking if the refactroing did something to the site
+- Settign up tests
+- Startign to work with Vipps and Visa API
+
 Status(29.09.2025):
 - Started work on it again:
     - Refactoring the models into Entity and Junction models for clearer information flow

@@ -1,178 +1,167 @@
-from .aktiviteter_models import *
-from .ansatt_models import *
-from .medlemmer_models import *
-from .site_models import *
-
-# Because for the validator to work it cant only be imported in the other model files, it also needs to be here?
-from .validators import *
-
-# I dont understand how this works, but ill start with it
-
-__all__ = [
-
-]
-
-from django.core.validators import RegexValidator, MaxValueValidator
-from django.core.exceptions import ValidationError
+from .aktiviteter_models import TypeAktivitet, StedAktivitet, MalgruppeAktivitet, DatoerSomUtgar, GenerellKursInfo, Aktivitet
+from .ansatt_models import Rolle, Personell, PersonellRolle
+from .medlemmer_models import Medlem
+from .site_models import ForesporselKategori, KundeKontakt, Bilde, ForeningInfo
+from .validators import kun_tall_validator
 from django.db import models
-from django.utils import timezone
-from datetime import timedelta
 
+# CORE
 # The sub-models hold the core/entity models
 # The main model will hold assosiative/junction tables representing the dynamic relation between the models
 
+class BetalingRegistrering(models.Model):
+    """
+    Holder oversikt over betalinger som er gjennomført fra medlemmer.
 
+    Henter informasjon ifra:
+    Medlem - hvem betalingen gjelder
 
+    Brukes av:
+    MedlemPameldt - for å se hvem som har betalt.
+    DropInBetaling - for å se hvem som har betalt.
+    KunMedlemmer - for å se hvem som har betalt.
+    """
+    medlem = models.ForeignKey(Medlem, on_delete=models.PROTECT)
+    belop = models.PositiveIntegerField()
+    dato = models.DateTimeField(null=True, blank=True)
+    betaling_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('venter', 'Venter på betaling'),
+            ('godkjent', 'Godkjent'),
+            ('feilet', 'Feilet'),
+            ('refundert', 'Refundert'),
+            ('kansellert', 'Kansellert')
+        ],
+        default='venter'
+    )
+    kvittering_url= models.URLField(blank=True)
+    transaksjons_id = models.CharField(max_length=100, blank=True)
+    betaling_formal = models.JSONField(default=list)
 
+    class Meta:
+        verbose_name = "Betaling fra medlem"
+        verbose_name_plural = "Betalinger fra medlemmer"
+
+    def __str__(self):
+        return f"{self.medlem} - {self.belop} kr -{self.dato}"
+
+class AktivitetskortetDeltager(models.Model):
+    """
+    Holder oversikt over brukere av aktivitetskortet og hvorvidt kortet deres er godkjent.
+
+    Henter informasjon ifra:
+    Medlem - hvem betalingen gjelder
+
+    Brukes av:
+    """
+    medlem = models.ForeignKey(Medlem, on_delete=models.PROTECT)
+    aktivitetskort_bilde1 = models.ImageField(upload_to='aktivitetskort/', blank=True, null=True)
+    aktivitetskort_bilde2 = models.ImageField(upload_to='aktivitetskort/', blank=True, null=True)
+    aktivitetskort_godkjent = models.BooleanField(default=False)
+
+# Future 1: Maybe should be a verifier here that checks if someone is already signed-up when they try to submit their form?
 class MedlemPameldt(models.Model):
-
-# Kanskje drop-in skal endres til BetalingsType og sånn blir deltagere fordelt på betalignstabeller?
-# Legge til rabatt attr her.
     """
-    Oversikt over hvilken medlemmer(Medlem) som er påmeldt hvilken aktiviteter(Aktivitet).
-    
+    Holder oversikt over hvem som er påmeldt hvilken aktivitet.
+
+    Henter informasjon ifra:
+    Medlem - Hvem dette gjelder.
+    Aktivitet - Hvilken aktivitet det gjelder.
+    BetalingRegistrering - Informasjon om gjennomført betaling.
+
     Brukes av:
-    Aktiviteter - for å sjekke ledige plasser.
-    DeltagerOppmote - for å sjekke hvilken deltagere det skal sjekkes oppmøte på.
-
+    Aktivitet - for å kalkulere antall ledige plasser.
+    DeltagerOppmote - for å hente informasjon om deltagere og datoene for aktiviteten.
     """
-    aktivitet = models.ForeignKey(Aktivitet, on_delete = models.PROTECT, related_name= "pameldte_deltagere")
-    medlem = models.ForeignKey(Medlem, on_delete = models.PROTECT)
-    drop_in = models.BooleanField(default=False)
+    aktivitet = models.ForeignKey(Aktivitet, on_delete=models.PROTECT)
+    medlem = models.ForeignKey(Medlem, on_delete=models.PROTECT)
+    dato_pameldt = models.DateTimeField(auto_now_add=True)
+    status_pamelding = models.CharField(
+        max_length=20,
+        choices=[
+            ('pameldt', 'Pameldt'),
+            ('avmeldt', 'Avmeldt'),
+            ('venteliste', 'Venteliste')
+        ]
+    )
+    type_betaling = models.CharField(
+        max_length=20,
+        choices = [
+            ('drop_in', 'Drop-In'),
+            ('vanlig', 'Vanlig'),
+            ('aktivitetskortet', 'Aktivitetskortet'),
+            ('gratis', 'Gratis'),
+            ('friplass', 'Friplass'),
+            ('redusert betaling', 'Redusert Betaling')
+        ]
+    )
+    betaling_registrert = models.ForeignKey(BetalingRegistrering, on_delete=models.PROTECT)
+    oppfolging_notater = models.TextField(blank=True)
+    trenger_oppfolging = models.BooleanField(default=True)
 
-    def __str__(self):
-        return f"{self.medlem} - {self.aktivitet}"
-    
-    class Meta:
-        verbose_name = "Påmeldt deltager"
-        verbose_name_plural = "Medlemsinfo: Deltager påmelding"
-
-class BetalingsType(models.Model):
-
-# Kanskje hele denne skal flyttes og brukes i MedlemPameldt for å sortere mellom standard, drop-in og støtte?
-# Trenger den å være synlig admin side eller kan den være skjult i koden?
+class DropInBetaling(models.Model):
     """
-    Måter folk kan betale for deltagelse på aktiviteter.
-    
+    Holder oversikt over alle ganger en person med drop-in har deltatt og hvoridt de har betalt.
+
+    Henter informasjon ifra:
+
     Brukes av:
-    Betalingstatus - for å sette hvordan deltagere har betalt.
     """
-    navn = models.CharField(max_length=30)
-    
-    def __str__(self):
-        return self.navn
-    
-    class Meta:
-        verbose_name = "Betalingstype"
-        verbose_name_plural = "Medlemsinfo: Betalingstyper"
+    pass
 
-class BetalingStatus(models.Model):
-
-# Vil trenge et filter på status_betaling
-# Rabatt flyttes til MedlemPameldt.
+class KunMedlemmer(models.Model):
     """
-    Oversikt over hvem som har betalt(MedlemPameldt.drop_in = False), hvor mye og hvordan(BetalingsType).
-    Drop-in har egen tabell. Aktivitet tabel brukes for å regne ut hvor mye de skal betale.
-    
-    Planlagt brukt i flere tabeller/funksjoner forbi fase 1.
-    """
-    medlem_pameldt = models.ForeignKey(MedlemPameldt, on_delete=models.PROTECT)
-    type_betaling = models.ForeignKey(BetalingsType, on_delete=models.PROTECT)
-    original_pris = models.PositiveIntegerField()
-    rabatt = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(1)], help_text="Prosentrabatt: skriv in et tall mellom 0 og 1. Eks. 0.70 = 70%.")
-    endelig_pris = models.PositiveIntegerField()
-    status_betaling = models.BooleanField(default=False)
+    Holder oversikt over de som bare er medlemmer uten å delta på aktiviter som koster
+    og for hvilket år kontigenten deres er betalt.
 
-    def __str__(self):
-        return f"{self.medlem_pameldt} - Status: {self.status_betaling}"
+    Henter informasjon ifra:
 
-    def save(self, *args, **kwargs):
-
-        # Regner ut en pris basert på en prosent rabatt
-        self.original_pris = self.medlem_pameldt.aktivitet.pris_vanlig
-        self.endelig_pris = self.original_pris*(1-self.rabatt)
-
-        super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = "Betaling status"
-        verbose_name_plural = "Medlemsinfo: Betaling status"
-
-
-
-class DeltagerOppmote(models.Model):
-
-# Hadde vært fint å kunne filterer etter aktivtet og så vise en oppmøte tabell der 1 medlem kobles til 1 rad der dens oppmøte vises
-    """
-    Oversikt over oppmøte til aktivitets deltagere(MedlemPameldt) på spesifikke datoer(AktivitetDatoer).
-    
     Brukes av:
-    BetalingStatusDropIn - datoer deltager er tilstede skapes i tabellen for å kontrollerer betaling.
-    """
-    aktivitet_datoer = models.ForeignKey(AktivitetDatoer, on_delete=models.PROTECT)
-    medlem_pameldt = models.ForeignKey(MedlemPameldt, on_delete=models.PROTECT)
-    tilstede = models.BooleanField(default=False)
 
-    def __str__(self):
-        return f"{self.medlem_pameldt.medlem} {self.aktivitet_datoer.dato}"
+    """
+    pass
+
+
+# klasse for fond midler inn og fond midler ut
+# Output hva som er tilgjengelig, men man kan gå inn og se alt?
+
+# class DeltagerOppmote(models.Model):
+
+# # Hadde vært fint å kunne filterer etter aktivtet og så vise en oppmøte tabell der 1 medlem kobles til 1 rad der dens oppmøte vises
+#     """
+#     Oversikt over oppmøte til aktivitets deltagere(MedlemPameldt) på spesifikke datoer(AktivitetDatoer).
     
-    class Meta:
-        verbose_name = "Deltager oppmøte"
-        verbose_name_plural = "Medlemsinfo: Deltager oppmøte"
+#     Brukes av:
+#     BetalingStatusDropIn - datoer deltager er tilstede skapes i tabellen for å kontrollerer betaling.
+#     """
+#     aktivitet_datoer = models.ForeignKey(AktivitetDatoer, on_delete=models.PROTECT)
+#     medlem_pameldt = models.ForeignKey(MedlemPameldt, on_delete=models.PROTECT)
+#     tilstede = models.BooleanField(default=False)
 
-class PersonellOppmote(models.Model):
-
-# Denne vil trenge en del filter funskjoner basert på diverse foreldre og på utbetalt_lonn.
-# I tilegg til en knapp for å bekrefte utbetalelse før hele systemet er på plass.
-    """
-    Oversikt over hvem(PersonellRolle) som jobbet på hvilken aktivitet på en spesifikk dato(AktivitetDatoer).
+#     def __str__(self):
+#         return f"{self.medlem_pameldt.medlem} {self.aktivitet_datoer.dato}"
     
-    Planlagt brukt i flere tabeller forbi fase 1.
-    """
-    aktivitet_datoer = models.ForeignKey(AktivitetDatoer, on_delete=models.PROTECT)
-    personel_rolle = models.ForeignKey(PersonellRolle, on_delete=models.PROTECT)
-    utbetalt_lonn = models.BooleanField(default=False)
+#     class Meta:
+#         verbose_name = "Deltager oppmøte"
+#         verbose_name_plural = "Medlemsinfo: Deltager oppmøte"
 
-    def __str__(self):
-        return f"{self.personel_rolle} {self.aktivitet_datoer} - Status utbetaling: {self.utbetalt_lonn}"
+# class PersonellOppmote(models.Model):
 
-    class Meta:
-        verbose_name = "Personell oppmøte"
-        verbose_name_plural = "Personellinfo: Personell oppmøte"
-
-class BetalingStatusDropIn(models.Model):
-
-# Vil trenge en filter funksjon på status_betaling, deltager navn
-# Vil og trenge en generator funskjon som oppdatereres ukentlig basert på x
-# Skal rabatt funksjonene legges i MedlemPameldt isteden og så heller brukes til utregning i BetalingStatus og BetalingStatusDropIn?
-    """
-    Oversikt over alle(MedlemPameldt.drop_in = True) som betaler drop-in og hvilken datoer de har vært tilstede(DeltagerOppmote) og betalt for.
+# # Denne vil trenge en del filter funskjoner basert på diverse foreldre og på utbetalt_lonn.
+# # I tilegg til en knapp for å bekrefte utbetalelse før hele systemet er på plass.
+#     """
+#     Oversikt over hvem(PersonellRolle) som jobbet på hvilken aktivitet på en spesifikk dato(AktivitetDatoer).
     
-    Planlagt brukt i flere tabeller forbi fase 1.
-    """
-    deltager_oppmote = models.ForeignKey(DeltagerOppmote, on_delete=models.PROTECT)
-    dato = models.DateField()
-    original_pris = models.PositiveIntegerField()
-    rabatt = models.PositiveIntegerField(default=0, validators=[MaxValueValidator(1)], help_text="Prosentrabatt: skriv in et tall mellom 0 og 1. Eks. 0.70 = 70%.")
-    endelig_pris = models.PositiveIntegerField()
-    status_betaling = models.BooleanField(default=False)
+#     Planlagt brukt i flere tabeller forbi fase 1.
+#     """
+#     aktivitet_datoer = models.ForeignKey(AktivitetDatoer, on_delete=models.PROTECT)
+#     personel_rolle = models.ForeignKey(PersonellRolle, on_delete=models.PROTECT)
+#     utbetalt_lonn = models.BooleanField(default=False)
 
-    def __str__(self):
-        return f"{self.deltager_oppmote} - Status: {self.status_betaling}"
+#     def __str__(self):
+#         return f"{self.personel_rolle} {self.aktivitet_datoer} - Status utbetaling: {self.utbetalt_lonn}"
 
-    def save(self, *args, **kwargs):
-
-        # Regner ut en pris basert på en prosent rabatt
-        self.original_pris = self.deltager_oppmote.aktivitet_datoer.aktivitet.pris_drop_in
-        self.endelig_pris = self.original_pris*(1-self.rabatt)
-
-        super().save(*args, **kwargs)
-
-    class Meta:
-        verbose_name = "Betaling status drop-in"
-        verbose_name_plural = "Medlemsinfo: Betaling status drop-in"
-
-
-
-# Legg til en tilskudd/støtte tabell forbi fase 1
-# Forbi en viss fase legg inn statistikk funksjone
+#     class Meta:
+#         verbose_name = "Personell oppmøte"
+#         verbose_name_plural = "Personellinfo: Personell oppmøte"

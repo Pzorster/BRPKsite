@@ -1,7 +1,7 @@
 from django.db import models
 from .validators import kun_tall_validator
 
-
+# Future 1: Where notation about salary will be placed will be dependant on the system, for now standard_lonn stays here.
 class Rolle(models.Model):
     """
     Definerer forskjellige roller en person kan ha i foreningen. Både betalte og frivillige.
@@ -11,13 +11,14 @@ class Rolle(models.Model):
     """
     rolle = models.CharField(max_length=20)
     standard_lonn = models.PositiveIntegerField()
+    
+    class Meta:
+        verbose_name = "Rolle"
+        verbose_name_plural = "Personellinfo: Roller"
 
     def __str__(self):
         return self.rolle
 
-    class Meta:
-        verbose_name = "Rolle"
-        verbose_name_plural = "Personellinfo: Roller"
 
 # Future 1: Will be used for paying out salary and recording payment history
 class Personell(models.Model):
@@ -37,18 +38,23 @@ class Personell(models.Model):
     post_nummer = models.CharField(max_length=4, validators=[kun_tall_validator])
     skatt_info = models.TextField(verbose_name= "Hva trenger vi å vite om dine skatteforhold for å betale ut lønn? Type informasjon om skattekort/frikort.")
     annen_info = models.TextField(blank=True)
+    
+    class Meta:
+        verbose_name = "Personell"
+        verbose_name_plural = "Personell"
 
     def __str__(self):
         return f"{self.fornavn} {self.etternavn}"
 
-    class Meta:
-        verbose_name = "Personell"
-        verbose_name_plural = "Personell"
 
 # Future 1: Will be used for calculating salary
 class PersonellRolle(models.Model):
     """
     Oversikt over hvilken roller forskjellige personer har.
+
+    Henter informasjon ifra:
+    Rolle - navn på rollen og standard lønn.
+    Personell - hvem persoenen er.
     
     Brukes av:
     Aktivitet - hvilken person de har i hvilken rolle.
@@ -56,9 +62,9 @@ class PersonellRolle(models.Model):
     rolle = models.ForeignKey(Rolle, on_delete=models.PROTECT)
     personell = models.ForeignKey(Personell, on_delete=models.PROTECT)
 
-    def __str__(self):
-        return f"{self.personell} {self.rolle}"
-    
     class Meta:
         verbose_name = "Personell i rollen som"
         verbose_name_plural = "Personellinfo: Personell i rollen som"
+
+    def __str__(self):
+        return f"{self.personell} {self.rolle}"
