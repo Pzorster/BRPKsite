@@ -125,7 +125,8 @@ class Aktivitet(models.Model):
     personell_rolle = models.ManyToManyField(PersonellRolle)
     datoer_som_utgar = models.ManyToManyField(DatoerSomUtgar)
     start_dato = models.DateField()
-    slutt_dato = models.DateField()
+    # Current 1: added null/blank only for migrations
+    slutt_dato = models.DateField(null=True, blank=True)
     kl_start = models.TimeField()
     kl_slutt = models.TimeField()
     antall_ganger = models.PositiveIntegerField(null=True, blank=True)

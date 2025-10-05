@@ -96,7 +96,8 @@ class MedlemPameldt(models.Model):
             ('redusert betaling', 'Redusert Betaling')
         ]
     )
-    betaling_registrert = models.ForeignKey(BetalingRegistrering, on_delete=models.PROTECT)
+    # Current 1: added null/blank only for migrations
+    betaling_registrert = models.ForeignKey(BetalingRegistrering, on_delete=models.PROTECT, null=True, blank=True)
     oppfolging_notater = models.TextField(blank=True)
     trenger_oppfolging = models.BooleanField(default=True)
 
